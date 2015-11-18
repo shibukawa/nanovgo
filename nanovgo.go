@@ -291,8 +291,8 @@ func (c *Context) LinearGradient(sx, sy, ex, ey float32, iColor, oColor Color) P
 	}
 
 	return Paint{
-		xform:      TransformMatrix{dy, -dx, dx, dy, sx - dx*large, sy - dy*large},
-		extent:     [2]float32{large, large + d*0.5},
+		xform:      TransformMatrix{dy, -dx, dx, dy, sx - dx * large, sy - dy * large},
+		extent:     [2]float32{large, large + d * 0.5},
 		radius:     0.0,
 		feather:    maxF(1.0, d),
 		innerColor: iColor,

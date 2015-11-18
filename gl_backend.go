@@ -211,7 +211,7 @@ func (c *GLContext) allocTexture() *GLTexture {
 	return tex
 }
 
-func (gl *GLContext) convertPaint(frag *GLFragUniforms, paint *Paint, scissor *Scissor, width, fringe, strokeThr float32) error {
+func (c *GLContext) convertPaint(frag *GLFragUniforms, paint *Paint, scissor *Scissor, width, fringe, strokeThr float32) error {
 	frag.setInnerColor(paint.innerColor.PreMultiply())
 	frag.setOuterColor(paint.outerColor.PreMultiply())
 
@@ -232,7 +232,7 @@ func (gl *GLContext) convertPaint(frag *GLFragUniforms, paint *Paint, scissor *S
 	frag.setStrokeThr(strokeThr)
 
 	if paint.image != 0 {
-		tex := gl.findTexture(paint.image)
+		tex := c.findTexture(paint.image)
 		if tex == nil {
 			return errors.New("invalid texture in GLParams.convertPaint")
 		}
@@ -275,18 +275,18 @@ func (c *GLContext) setUniforms(uniformOffset, image int) {
 	}
 }
 
-func (p *GLContext) fill(call *GLCall) {
-	paths := p.paths[call.pathOffset : call.pathOffset+call.pathCount]
+func (c *GLContext) fill(call *GLCall) {
+	paths := c.paths[call.pathOffset : call.pathOffset+call.pathCount]
 
 	// Draw shapes
 	gl.Enable(gl.STENCIL_TEST)
-	p.setStencilMask(0xff)
-	p.setStencilFunc(gl.ALWAYS, 0x00, 0xff)
+	c.setStencilMask(0xff)
+	c.setStencilFunc(gl.ALWAYS, 0x00, 0xff)
 	gl.ColorMask(false, false, false, false)
 
 	// set bindpoint for solid loc
-	p.setUniforms(call.uniformOffset, 0)
-	checkError(p, "fill simple")
+	c.setUniforms(call.uniformOffset, 0)
+	checkError(c, "fill simple")
 
 	gl.StencilOpSeparate(gl.FRONT, gl.KEEP, gl.KEEP, gl.INCR_WRAP)
 	gl.StencilOpSeparate(gl.BACK, gl.KEEP, gl.KEEP, gl.DECR_WRAP)
@@ -299,11 +299,11 @@ func (p *GLContext) fill(call *GLCall) {
 
 	// Draw anti-aliased pixels
 	gl.ColorMask(true, true, true, true)
-	p.setUniforms(call.uniformOffset+1, call.image)
-	checkError(p, "fill fill")
+	c.setUniforms(call.uniformOffset+1, call.image)
+	checkError(c, "fill fill")
 
-	if p.flags&ANTIALIAS != 0 {
-		p.setStencilFunc(gl.EQUAL, 0x00, 0xff)
+	if c.flags&ANTIALIAS != 0 {
+		c.setStencilFunc(gl.EQUAL, 0x00, 0xff)
 		gl.StencilOp(gl.KEEP, gl.KEEP, gl.KEEP)
 		// Draw fringes
 		for _, path := range paths {
@@ -312,49 +312,49 @@ func (p *GLContext) fill(call *GLCall) {
 	}
 
 	// Draw fill
-	p.setStencilFunc(gl.NOTEQUAL, 0x00, 0xff)
+	c.setStencilFunc(gl.NOTEQUAL, 0x00, 0xff)
 	gl.StencilOp(gl.ZERO, gl.ZERO, gl.ZERO)
 	gl.DrawArrays(gl.TRIANGLES, call.triangleOffset, call.triangleCount)
 
 	gl.Disable(gl.STENCIL_TEST)
 }
 
-func (p *GLContext) convexFill(call *GLCall) {
-	paths := p.paths[call.pathOffset : call.pathOffset+call.pathCount]
+func (c *GLContext) convexFill(call *GLCall) {
+	paths := c.paths[call.pathOffset : call.pathOffset+call.pathCount]
 
-	p.setUniforms(call.uniformOffset, call.image)
-	checkError(p, "convex fill")
+	c.setUniforms(call.uniformOffset, call.image)
+	checkError(c, "convex fill")
 
 	for _, path := range paths {
 		gl.DrawArrays(gl.TRIANGLE_FAN, path.fillOffset, path.fillCount)
 	}
 
-	if p.flags&ANTIALIAS != 0 {
+	if c.flags&ANTIALIAS != 0 {
 		for _, path := range paths {
 			gl.DrawArrays(gl.TRIANGLE_STRIP, path.strokeOffset, path.strokeCount)
 		}
 	}
 }
 
-func (p *GLContext) stroke(call *GLCall) {
-	paths := p.paths[call.pathOffset : call.pathOffset+call.pathCount]
+func (c *GLContext) stroke(call *GLCall) {
+	paths := c.paths[call.pathOffset : call.pathOffset+call.pathCount]
 
-	if p.flags&STENCIL_STROKES != 0 {
+	if c.flags&STENCIL_STROKES != 0 {
 		gl.Enable(gl.STENCIL_TEST)
-		p.setStencilMask(0xff)
+		c.setStencilMask(0xff)
 
 		// Fill the stroke base without overlap
-		p.setStencilFunc(gl.EQUAL, 0x00, 0xff)
+		c.setStencilFunc(gl.EQUAL, 0x00, 0xff)
 		gl.StencilOp(gl.KEEP, gl.KEEP, gl.INCR)
-		p.setUniforms(call.uniformOffset+1, call.image)
-		checkError(p, "stroke fill 0")
+		c.setUniforms(call.uniformOffset+1, call.image)
+		checkError(c, "stroke fill 0")
 		for _, path := range paths {
 			gl.DrawArrays(gl.TRIANGLE_STRIP, path.strokeOffset, path.strokeCount)
 		}
 
 		// Draw anti-aliased pixels.
-		p.setUniforms(call.uniformOffset, call.image)
-		p.setStencilFunc(gl.EQUAL, 0x00, 0xff)
+		c.setUniforms(call.uniformOffset, call.image)
+		c.setStencilFunc(gl.EQUAL, 0x00, 0xff)
 		gl.StencilOp(gl.KEEP, gl.KEEP, gl.KEEP)
 		for _, path := range paths {
 			gl.DrawArrays(gl.TRIANGLE_STRIP, path.strokeOffset, path.strokeCount)
@@ -362,26 +362,26 @@ func (p *GLContext) stroke(call *GLCall) {
 
 		// Clear stencil buffer.
 		gl.ColorMask(false, false, false, false)
-		p.setStencilFunc(gl.ALWAYS, 0x00, 0xff)
+		c.setStencilFunc(gl.ALWAYS, 0x00, 0xff)
 		gl.StencilOp(gl.ZERO, gl.ZERO, gl.ZERO)
-		checkError(p, "stroke fill 1")
+		checkError(c, "stroke fill 1")
 		for _, path := range paths {
 			gl.DrawArrays(gl.TRIANGLE_STRIP, path.strokeOffset, path.strokeCount)
 		}
 		gl.ColorMask(true, true, true, true)
 		gl.Disable(gl.STENCIL_TEST)
 	} else {
-		p.setUniforms(call.uniformOffset, call.image)
-		checkError(p, "stroke fill")
+		c.setUniforms(call.uniformOffset, call.image)
+		checkError(c, "stroke fill")
 		for _, path := range paths {
 			gl.DrawArrays(gl.TRIANGLE_STRIP, path.strokeOffset, path.strokeCount)
 		}
 	}
 }
 
-func (p *GLContext) triangles(call *GLCall) {
-	p.setUniforms(call.uniformOffset, call.image)
-	checkError(p, "triangles fill")
+func (c *GLContext) triangles(call *GLCall) {
+	c.setUniforms(call.uniformOffset, call.image)
+	checkError(c, "triangles fill")
 	gl.DrawArrays(gl.TRIANGLE_STRIP, call.triangleOffset, call.triangleCount)
 }
 
@@ -813,6 +813,7 @@ func checkError(p *GLContext, str string) {
 	err := gl.GetError()
 	if err != gl.NO_ERROR {
 		log.Printf("Error %08x after %s\n", int(err), str)
+		panic("")
 	}
 }
 
