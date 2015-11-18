@@ -25,7 +25,6 @@ type Params interface {
 	stroke(paint *Paint, scissor *Scissor, fringe float32, strokeWidth float32, paths []Path)
 	triangles(paint *Paint, scissor *Scissor, vertexes []Vertex)
 	delete()
-	imageHandle(img int) uint32
 }
 
 type Context struct {
@@ -276,10 +275,6 @@ func (c *Context) ImageSize(img int) (int, int, error) {
 
 func (c *Context) DeleteImage(img int) {
 	c.params.deleteTexture(img)
-}
-
-func (c *Context) ImageHandle(img int) uint32 {
-	return c.params.imageHandle(img)
 }
 
 func (c *Context) LinearGradient(sx, sy, ex, ey float32, iColor, oColor Color) Paint {
@@ -536,7 +531,7 @@ func (c *Context) RoundRect(x, y, w, h, r float32) {
 		ry := minF(r, absF(h)*0.5) * signF(h)
 		c.appendCommand([]float32{
 			float32(nvg_MOVETO), x, y + ry,
-				float32(nvg_LINETO), x, y + h - ry,
+			float32(nvg_LINETO), x, y + h - ry,
 			float32(nvg_BEZIERTO), x, y + h - ry*(1-KAPPA90), x + rx*(1-KAPPA90), y + h, x + rx, y + h,
 			float32(nvg_LINETO), x + w - rx, y + h,
 			float32(nvg_BEZIERTO), x + w - rx*(1-KAPPA90), y + h, x + w, y + h - ry*(1-KAPPA90), x + w, y + h - ry,
@@ -611,8 +606,8 @@ func (c *Context) Fill() {
 	// Count triangles
 	for i := 0; i < len(c.cache.paths); i++ {
 		path := &c.cache.paths[i]
-		c.fillTriCount += len(path.fills)-2
-		c.strokeTriCount += len(path.strokes)-2
+		c.fillTriCount += len(path.fills) - 2
+		c.strokeTriCount += len(path.strokes) - 2
 		c.drawCallCount += 2
 	}
 }
@@ -620,15 +615,15 @@ func (c *Context) Fill() {
 func (c *Context) Stroke() {
 	state := c.getState()
 	scale := getAverageScale(state.xform)
-	strokeWidth := clampF(state.strokeWidth * scale, 0.0, 200.0)
+	strokeWidth := clampF(state.strokeWidth*scale, 0.0, 200.0)
 	strokePaint := state.stroke
 
 	if strokeWidth < c.fringeWidth {
 		// If the stroke width is less than pixel size, use alpha to emulate coverage.
 		// Since coverage is area, scale by alpha*alpha.
-		alpha := clampF(strokeWidth / c.fringeWidth, 0.0, 1.0)
-		strokePaint.innerColor.A *= alpha*alpha
-		strokePaint.outerColor.A *= alpha*alpha
+		alpha := clampF(strokeWidth/c.fringeWidth, 0.0, 1.0)
+		strokePaint.innerColor.A *= alpha * alpha
+		strokePaint.outerColor.A *= alpha * alpha
 	}
 
 	// Apply global alpha
@@ -646,7 +641,7 @@ func (c *Context) Stroke() {
 	// Count triangles
 	for i := 0; i < len(c.cache.paths); i++ {
 		path := &c.cache.paths[i]
-		c.strokeTriCount += len(path.strokes)-2
+		c.strokeTriCount += len(path.strokes) - 2
 		c.drawCallCount += 2
 	}
 }

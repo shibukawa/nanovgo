@@ -110,7 +110,6 @@ type GLContext struct {
 	vertexes     []byte
 	uniforms     []GLFragUniforms
 
-	boundTexture    uint32
 	stencilMask     uint32
 	stencilFunc     gl.Enum
 	stencilFuncRef  int
@@ -138,15 +137,9 @@ func (c *GLContext) deleteTexture(id int) error {
 
 func (c *GLContext) bindTexture(tex *gl.Texture) {
 	if tex == nil {
-		if c.boundTexture != 0 {
-			gl.BindTexture(gl.TEXTURE_2D, gl.Texture{})
-			c.boundTexture = 0
-		}
+		gl.BindTexture(gl.TEXTURE_2D, gl.Texture{})
 	} else {
-		if c.boundTexture != tex.Value {
-			gl.BindTexture(gl.TEXTURE_2D, *tex)
-			c.boundTexture = tex.Value
-		}
+		gl.BindTexture(gl.TEXTURE_2D, *tex)
 	}
 }
 
@@ -179,12 +172,13 @@ func (c *GLContext) checkError(str string) {
 func (c *GLContext) appendVertex(vertexes []Vertex) {
 	oldCount := len(c.vertexes)
 	c.vertexes = append(c.vertexes, make([]byte, 4*4*len(vertexes))...)
-	offset := c.vertexes[oldCount*16:]
-	for i := range c.vertexes {
-		binary.LittleEndian.PutUint32(offset[i*4*4:], math.Float32bits(vertexes[i].x))
-		binary.LittleEndian.PutUint32(offset[i*4*4+4:], math.Float32bits(vertexes[i].y))
-		binary.LittleEndian.PutUint32(offset[i*4*4+8:], math.Float32bits(vertexes[i].u))
-		binary.LittleEndian.PutUint32(offset[i*4*4+12:], math.Float32bits(vertexes[i].v))
+	offset := c.vertexes[oldCount:]
+	for i := range vertexes {
+		vertex := &(vertexes[i])
+		binary.LittleEndian.PutUint32(offset[i*4*4:], math.Float32bits(vertex.x))
+		binary.LittleEndian.PutUint32(offset[i*4*4+4:], math.Float32bits(vertex.y))
+		binary.LittleEndian.PutUint32(offset[i*4*4+8:], math.Float32bits(vertex.u))
+		binary.LittleEndian.PutUint32(offset[i*4*4+12:], math.Float32bits(vertex.v))
 	}
 }
 
@@ -277,7 +271,7 @@ func (c *GLContext) setUniforms(uniformOffset, image int) {
 		c.bindTexture(&c.findTexture(image).tex)
 		checkError(c, "tex paint tex")
 	} else {
-		c.bindTexture(&gl.Texture{0})
+		c.bindTexture(&gl.Texture{})
 	}
 }
 
@@ -504,7 +498,7 @@ func (p *GLParams) createTexture(texType nvgTextureType, w, h int, flags ImageFl
 
 func (p *GLParams) deleteTexture(id int) error {
 	tex := p.context.findTexture(id)
-	if tex.tex.Value != 0 && (tex.flags&IMAGE_NODELETE) == 0 {
+	if tex.tex.Valid() && (tex.flags&IMAGE_NODELETE) == 0 {
 		gl.DeleteTexture(tex.tex)
 		tex.id = 0
 		tex.tex = gl.Texture{}
@@ -582,7 +576,6 @@ func (p *GLParams) flush() {
 		gl.StencilFunc(gl.ALWAYS, 0, 0xffffffff)
 		gl.ActiveTexture(gl.TEXTURE0)
 
-		c.boundTexture = 0
 		c.stencilMask = 0xffffffff
 		c.stencilFunc = gl.ALWAYS
 		c.stencilFuncRef = 0
@@ -616,8 +609,8 @@ func (p *GLParams) flush() {
 		gl.DisableVertexAttribArray(gl.Attrib{0})
 		gl.DisableVertexAttribArray(gl.Attrib{1})
 		gl.Disable(gl.CULL_FACE)
-		gl.BindBuffer(gl.ARRAY_BUFFER, gl.Buffer{0})
-		gl.UseProgram(gl.Program{0})
+		gl.BindBuffer(gl.ARRAY_BUFFER, gl.Buffer{})
+		gl.UseProgram(gl.Program{})
 		c.bindTexture(nil)
 	}
 	c.vertexes = c.vertexes[:0]
@@ -788,20 +781,15 @@ func (p *GLParams) triangles(paint *Paint, scissor *Scissor, vertexes []Vertex) 
 func (p *GLParams) delete() {
 	c := p.context
 	c.shader.deleteShader()
-	if c.vertexBuffer.Value != 0 {
+	if c.vertexBuffer.Valid() {
 		gl.DeleteBuffer(c.vertexBuffer)
 	}
 	for _, texture := range c.textures {
-		if texture.tex.Value != 0 && (texture.flags&IMAGE_NODELETE) == 0 {
+		if texture.tex.Valid() && (texture.flags&IMAGE_NODELETE) == 0 {
 			gl.DeleteTexture(texture.tex)
 		}
 	}
 	p.context = nil
-}
-
-func (p *GLParams) imageHandle(image int) uint32 {
-	tex := p.context.findTexture(image)
-	return tex.tex.Value
 }
 
 func dumpShaderError(shader gl.Shader, name, typeName string) error {
@@ -836,12 +824,6 @@ func maxVertexCount(paths []Path) int {
 	}
 	return count
 }
-
-var shaderHeader string = `
-#version 100
-#define NANOVG_GL2 1
-#define UNIFORMARRAY_SIZE 11
-`
 
 var fillVertexShader string = `
 #ifdef NANOVG_GL3
@@ -888,14 +870,16 @@ var fillFragmentShader = `
                int texType;
                int type;
        };
-#else\n" // NANOVG_GL3 && !USE_UNIFORMBUF
+#else
+       // NANOVG_GL3 && !USE_UNIFORMBUF
        uniform vec4 frag[UNIFORMARRAY_SIZE];
 #endif
        uniform sampler2D tex;
        in vec2 ftcoord;
        in vec2 fpos;
        out vec4 outColor;
-#else\n" // !NANOVG_
+#else
+       // !NANOVG_
        uniform vec4 frag[UNIFORMARRAY_SIZE];
        uniform sampler2D tex;
        varying vec2 ftcoord;
@@ -960,8 +944,8 @@ void main(void) {
 #else
                vec4 color = texture2D(tex, pt);
 #endif
-               if (texType == 1) color = vec4(color.xyz*color.w,color.w
-               if (texType == 2) color = vec4(color.x
+               if (texType == 1) color = vec4(color.xyz*color.w,color.w);
+               if (texType == 2) color = vec4(color.x);
                // Apply color tint and alpha.
                color *= innerCol;
                // Combine alpha
@@ -975,8 +959,8 @@ void main(void) {
 #else
                vec4 color = texture2D(tex, ftcoord);
 #endif
-               if (texType == 1) color = vec4(color.xyz*color.w,color.w
-               if (texType == 2) color = vec4(color.x
+               if (texType == 1) color = vec4(color.xyz*color.w,color.w);
+               if (texType == 2) color = vec4(color.x);
                color *= scissor;
                result = color * innerCol;
        }
