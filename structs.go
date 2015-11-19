@@ -276,13 +276,12 @@ func (c *nvgPathCache) expandStroke(w float32, lineCap, lineJoin LineCap, miterL
 	countVertex := 0
 	for i := 0; i < len(c.paths); i++ {
 		path := &c.paths[i]
-		loop := !path.closed
 		if lineJoin == ROUND {
 			countVertex += (path.count + path.nBevel*(nCap+2) + 1) * 2 // plus one for loop
 		} else {
 			countVertex += (path.count + path.nBevel*5 + 1) * 2 // plus one for loop
 		}
-		if !loop {
+		if !path.closed {
 			// space for caps
 			if lineCap == ROUND {
 				countVertex += (nCap*2 + 2) * 2
@@ -299,15 +298,14 @@ func (c *nvgPathCache) expandStroke(w float32, lineCap, lineJoin LineCap, miterL
 		path := &c.paths[i]
 		points := c.points[path.first:]
 
-		path.fills = path.fills[:]
+		path.fills = path.fills[0:0]
 
 		// Calculate fringe or stroke
-		loop := !path.closed
 		index := 0
 		var p0, p1 *nvgPoint
 		var s, e, p1Index int
 
-		if loop {
+		if path.closed {
 			// Looping
 			p0 = &points[path.count-1]
 			p1 = &points[0]
@@ -344,7 +342,7 @@ func (c *nvgPathCache) expandStroke(w float32, lineCap, lineJoin LineCap, miterL
 				}
 			} else {
 				(&dst[index]).set(p1.x+p1.dmx*w, p1.y+p1.dmy*w, 0, 1)
-				(&dst[index+1]).set(p1.x+p1.dmx*w, p1.y+p1.dmy*w, 0, 1)
+				(&dst[index+1]).set(p1.x-p1.dmx*w, p1.y-p1.dmy*w, 1, 1)
 				index += 2
 			}
 			p1Index++
@@ -354,9 +352,9 @@ func (c *nvgPathCache) expandStroke(w float32, lineCap, lineJoin LineCap, miterL
 			}
 		}
 
-		if loop {
+		if path.closed {
 			(&dst[index]).set(dst[0].x, dst[0].y, 0, 1)
-			(&dst[index+1]).set(dst[1].x, dst[1].y, 0, 1)
+			(&dst[index+1]).set(dst[1].x, dst[1].y, 1, 1)
 			index += 2
 		} else {
 			dx := p1.x - p0.x

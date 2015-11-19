@@ -545,6 +545,7 @@ func (c *Context) Stroke() {
 		alpha := clampF(strokeWidth/c.fringeWidth, 0.0, 1.0)
 		strokePaint.innerColor.A *= alpha * alpha
 		strokePaint.outerColor.A *= alpha * alpha
+		strokeWidth = c.fringeWidth
 	}
 
 	// Apply global alpha
@@ -553,9 +554,9 @@ func (c *Context) Stroke() {
 
 	c.flattenPaths()
 	if c.params.edgeAntiAlias() {
-		c.cache.expandStroke(c.fringeWidth*0.5+c.fringeWidth*0.5, state.lineCap, state.lineJoin, state.miterLimit, c.fringeWidth, c.tessTol)
+		c.cache.expandStroke(strokeWidth*0.5+c.fringeWidth*0.5, state.lineCap, state.lineJoin, state.miterLimit, c.fringeWidth, c.tessTol)
 	} else {
-		c.cache.expandStroke(c.fringeWidth*0.5, state.lineCap, state.lineJoin, state.miterLimit, c.fringeWidth, c.tessTol)
+		c.cache.expandStroke(strokeWidth*0.5, state.lineCap, state.lineJoin, state.miterLimit, c.fringeWidth, c.tessTol)
 	}
 	c.params.renderStroke(&strokePaint, &state.scissor, c.fringeWidth, strokeWidth, c.cache.paths)
 
