@@ -226,7 +226,7 @@ func roundJoin(dst []nvgVertex, index int, p0, p1 *nvgPoint, lw, rw, lu, ru floa
 		}
 		(&dst[index]).set(lx0, ly0, lu, 1)
 		(&dst[index+1]).set(p1.x-dlx0*rw, p1.y-dly0*rw, ru, 1)
-		index = 2
+		index += 2
 		n := clampI(ceilF(((a0-a1)/PI)*float32(nCap)), 2, nCap)
 		for i := 0; i < n; i++ {
 			u := float32(i) / float32(n-1)
@@ -250,7 +250,7 @@ func roundJoin(dst []nvgVertex, index int, p0, p1 *nvgPoint, lw, rw, lu, ru floa
 		}
 		(&dst[index]).set(p1.x+dlx0*rw, p1.y+dly0*rw, lu, 1)
 		(&dst[index+1]).set(rx0, ry0, ru, 1)
-		index = 2
+		index += 2
 		n := clampI(ceilF(((a1-a0)/PI)*float32(nCap)), 2, nCap)
 		for i := 0; i < n; i++ {
 			u := float32(i) / float32(n-1)
@@ -281,7 +281,7 @@ func bevelJoin(dst []nvgVertex, index int, p0, p1 *nvgPoint, lw, rw, lu, ru, fri
 
 		(&dst[index]).set(lx0, ly0, lu, 1)
 		(&dst[index+1]).set(p1.x-dlx0*rw, p1.y-dly0*rw, ru, 1)
-		index = 2
+		index += 2
 
 		if isBevel {
 			(&dst[index]).set(lx0, ly0, lu, 1)
@@ -314,7 +314,7 @@ func bevelJoin(dst []nvgVertex, index int, p0, p1 *nvgPoint, lw, rw, lu, ru, fri
 
 		(&dst[index]).set(p1.x+dlx0*lw, p1.y+dly0*lw, lu, 1)
 		(&dst[index+1]).set(rx0, ry0, ru, 1)
-		index = 2
+		index += 2
 
 		if isBevel {
 			(&dst[index]).set(p1.x+dlx0*lw, p1.y+dly0*lw, lu, 1)
@@ -396,6 +396,7 @@ func roundCapEnd(dst []nvgVertex, index int, p *nvgPoint, dx, dy, w float32, nCa
 	dly := -dx
 	(&dst[index]).set(px+dlx*w, py+dly*w, 0, 1)
 	(&dst[index+1]).set(px-dlx*w, py-dly*w, 1, 1)
+	index += 2
 	for i := 0; i < nCap; i++ {
 		a := float32(i) / float32(nCap-1) * PI
 		s, c := sinCosF(a)

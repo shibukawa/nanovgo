@@ -220,7 +220,7 @@ func (c *glContext) convertPaint(frag *glFragUniforms, paint *Paint, scissor *nv
 		frag.setScissorExt(1.0, 1.0)
 		frag.setScissorScale(1.0, 1.0)
 	} else {
-		xform := scissor.xform
+		xform := &scissor.xform
 		frag.setScissorMat(xform.Inverse().ToMat3x4())
 		frag.setScissorExt(scissor.extent[0], scissor.extent[1])
 		scaleX := sqrtF(xform[0]*xform[0]+xform[2]*xform[2]) / fringe
@@ -260,6 +260,7 @@ func (c *glContext) convertPaint(frag *glFragUniforms, paint *Paint, scissor *nv
 		frag.setFeather(paint.feather)
 		frag.setPaintMat(paint.xform.Inverse().ToMat3x4())
 	}
+
 	return nil
 }
 
@@ -276,7 +277,7 @@ func (c *glContext) setUniforms(uniformOffset, image int) {
 }
 
 func (c *glContext) fill(call *glCall) {
-	paths := c.paths[call.pathOffset : call.pathOffset+call.pathCount]
+	pathSentinel := call.pathOffset + call.pathCount
 
 	// Draw shapes
 	gl.Enable(gl.STENCIL_TEST)
@@ -292,7 +293,8 @@ func (c *glContext) fill(call *glCall) {
 	gl.StencilOpSeparate(gl.BACK, gl.KEEP, gl.KEEP, gl.DECR_WRAP)
 
 	gl.Disable(gl.CULL_FACE)
-	for _, path := range paths {
+	for i := call.pathOffset; i < pathSentinel; i++ {
+		path := &c.paths[i]
 		gl.DrawArrays(gl.TRIANGLE_FAN, path.fillOffset, path.fillCount)
 	}
 	gl.Enable(gl.CULL_FACE)
@@ -306,7 +308,8 @@ func (c *glContext) fill(call *glCall) {
 		c.setStencilFunc(gl.EQUAL, 0x00, 0xff)
 		gl.StencilOp(gl.KEEP, gl.KEEP, gl.KEEP)
 		// Draw fringes
-		for _, path := range paths {
+		for i := call.pathOffset; i < pathSentinel; i++ {
+			path := &c.paths[i]
 			gl.DrawArrays(gl.TRIANGLE_FAN, path.strokeOffset, path.strokeCount)
 		}
 	}

@@ -47,7 +47,7 @@ func (u *glFragUniforms) reset() {
 }
 
 func (u *glFragUniforms) setScissorMat(mat []float32) {
-	copy(u[0:12][:], mat[0:12])
+	copy(u[0:12], mat[0:12])
 }
 
 func (u *glFragUniforms) setPaintMat(mat []float32) {
