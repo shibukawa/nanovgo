@@ -164,7 +164,7 @@ func triArea2(ax, ay, bx, by, cx, cy float32) float32 {
 	return acX*abY - abX*acY
 }
 
-func polyArea(points []Point) float32 {
+func polyArea(points []nvgPoint) float32 {
 	var area float32 = 0.0
 	a := &points[0]
 	for i := 2; i < len(points); i++ {
@@ -175,7 +175,7 @@ func polyArea(points []Point) float32 {
 	return area * 0.5
 }
 
-func polyReverse(points []Point) {
+func polyReverse(points []nvgPoint) {
 	i := 0
 	j := len(points) - 1
 	for i < j {
@@ -196,7 +196,7 @@ func curveDivs(r, arc, tol float32) int {
 	return maxI(2, int(math.Ceil(float64(arc)/da)))
 }
 
-func chooseBevel(bevel bool, p0, p1 *Point, w float32) (x0, y0, x1, y1 float32) {
+func chooseBevel(bevel bool, p0, p1 *nvgPoint, w float32) (x0, y0, x1, y1 float32) {
 	if bevel {
 		x0 = p1.x + p0.dy*w
 		y0 = p1.y - p0.dx*w
@@ -211,7 +211,7 @@ func chooseBevel(bevel bool, p0, p1 *Point, w float32) (x0, y0, x1, y1 float32) 
 	return
 }
 
-func roundJoin(dst []Vertex, index int, p0, p1 *Point, lw, rw, lu, ru float32, nCap int, fringe float32) int {
+func roundJoin(dst []nvgVertex, index int, p0, p1 *nvgPoint, lw, rw, lu, ru float32, nCap int, fringe float32) int {
 	dlx0 := p0.dy
 	dly0 := -p0.dx
 	dlx1 := p1.dy
@@ -269,7 +269,7 @@ func roundJoin(dst []Vertex, index int, p0, p1 *Point, lw, rw, lu, ru float32, n
 	return index
 }
 
-func bevelJoin(dst []Vertex, index int, p0, p1 *Point, lw, rw, lu, ru, fringe float32) int {
+func bevelJoin(dst []nvgVertex, index int, p0, p1 *nvgPoint, lw, rw, lu, ru, fringe float32) int {
 	dlx0 := p0.dy
 	dly0 := -p0.dx
 	dlx1 := p1.dy
@@ -346,7 +346,7 @@ func bevelJoin(dst []Vertex, index int, p0, p1 *Point, lw, rw, lu, ru, fringe fl
 	return index
 }
 
-func buttCapStart(dst []Vertex, index int, p *Point, dx, dy, w, d, aa float32) int {
+func buttCapStart(dst []nvgVertex, index int, p *nvgPoint, dx, dy, w, d, aa float32) int {
 	px := p.x - dx*d
 	py := p.y - dy*d
 	dlx := dy
@@ -358,7 +358,7 @@ func buttCapStart(dst []Vertex, index int, p *Point, dx, dy, w, d, aa float32) i
 	return index + 4
 }
 
-func buttCapEnd(dst []Vertex, index int, p *Point, dx, dy, w, d, aa float32) int {
+func buttCapEnd(dst []nvgVertex, index int, p *nvgPoint, dx, dy, w, d, aa float32) int {
 	px := p.x + dx*d
 	py := p.y + dy*d
 	dlx := dy
@@ -370,7 +370,7 @@ func buttCapEnd(dst []Vertex, index int, p *Point, dx, dy, w, d, aa float32) int
 	return index + 4
 }
 
-func roundCapStart(dst []Vertex, index int, p *Point, dx, dy, w float32, nCap int, aa float32) int {
+func roundCapStart(dst []nvgVertex, index int, p *nvgPoint, dx, dy, w float32, nCap int, aa float32) int {
 	px := p.x
 	py := p.y
 	dlx := dy
@@ -389,7 +389,7 @@ func roundCapStart(dst []Vertex, index int, p *Point, dx, dy, w float32, nCap in
 	return index + 2
 }
 
-func roundCapEnd(dst []Vertex, index int, p *Point, dx, dy, w float32, nCap int, aa float32) int {
+func roundCapEnd(dst []nvgVertex, index int, p *nvgPoint, dx, dy, w float32, nCap int, aa float32) int {
 	px := p.x
 	py := p.y
 	dlx := dy
@@ -406,4 +406,21 @@ func roundCapEnd(dst []Vertex, index int, p *Point, dx, dy, w float32, nCap int,
 		index += 2
 	}
 	return index
+}
+
+func nearestPow2(num int) int {
+	var n uint
+	uNum := uint(num)
+	if uNum > 0 {
+		n = uNum - 1
+	} else {
+		n = 0
+	}
+	n |= n >> 1
+	n |= n >> 2
+	n |= n >> 4
+	n |= n >> 8
+	n |= n >> 16
+	n++
+	return int(num)
 }

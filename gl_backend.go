@@ -11,30 +11,30 @@ import (
 )
 
 const (
-	GLNVG_LOC_VIEWSIZE = iota
-	GLNVG_LOC_TEX
-	GLNVG_LOC_FRAG
-	GLNVG_MAX_LOCS
+	glnvg_LOC_VIEWSIZE = iota
+	glnvg_LOC_TEX
+	glnvg_LOC_FRAG
+	glnvg_MAX_LOCS
 )
 
 func NewContext(flags CreateFlags) (*Context, error) {
-	params := &GLParams{
+	params := &glParams{
 		isEdgeAntiAlias: (flags & ANTIALIAS) != 0,
-		context: &GLContext{
+		context: &glContext{
 			flags: flags,
 		},
 	}
 	return createInternal(params)
 }
 
-type GLShader struct {
+type glShader struct {
 	program   gl.Program
 	fragment  gl.Shader
 	vertex    gl.Shader
-	locations [GLNVG_MAX_LOCS]gl.Uniform
+	locations [glnvg_MAX_LOCS]gl.Uniform
 }
 
-func (s *GLShader) createShader(name, header, opts, vShader, fShader string) error {
+func (s *glShader) createShader(name, header, opts, vShader, fShader string) error {
 	program := gl.CreateProgram()
 
 	vertexShader := gl.CreateShader(gl.VERTEX_SHADER)
@@ -72,7 +72,7 @@ func (s *GLShader) createShader(name, header, opts, vShader, fShader string) err
 	return nil
 }
 
-func (s *GLShader) deleteShader() {
+func (s *glShader) deleteShader() {
 	if s.program.Valid() {
 		gl.DeleteProgram(s.program)
 	}
@@ -84,31 +84,31 @@ func (s *GLShader) deleteShader() {
 	}
 }
 
-func (s *GLShader) getUniforms() {
-	s.locations[GLNVG_LOC_VIEWSIZE] = gl.GetUniformLocation(s.program, "viewSize")
-	s.locations[GLNVG_LOC_TEX] = gl.GetUniformLocation(s.program, "tex")
-	s.locations[GLNVG_LOC_FRAG] = gl.GetUniformLocation(s.program, "frag")
+func (s *glShader) getUniforms() {
+	s.locations[glnvg_LOC_VIEWSIZE] = gl.GetUniformLocation(s.program, "viewSize")
+	s.locations[glnvg_LOC_TEX] = gl.GetUniformLocation(s.program, "tex")
+	s.locations[glnvg_LOC_FRAG] = gl.GetUniformLocation(s.program, "frag")
 }
 
 const (
-	NANOVG_GL_UNIFORMARRAY_SIZE = 11
+	glnvg_NANOVG_GL_UNIFORMARRAY_SIZE = 11
 )
 
 const (
-	IMAGE_NODELETE ImageFlags = 1 << 16
+	glnvg_IMAGE_NODELETE ImageFlags = 1 << 16
 )
 
-type GLContext struct {
-	shader       GLShader
+type glContext struct {
+	shader       glShader
 	view         [2]float32
-	textures     []*GLTexture
+	textures     []*glTexture
 	textureId    int
 	vertexBuffer gl.Buffer
 	flags        CreateFlags
-	calls        []GLCall
-	paths        []GLPath
+	calls        []glCall
+	paths        []glPath
 	vertexes     []byte
-	uniforms     []GLFragUniforms
+	uniforms     []glFragUniforms
 
 	stencilMask     uint32
 	stencilFunc     gl.Enum
@@ -116,7 +116,7 @@ type GLContext struct {
 	stencilFuncMask uint32
 }
 
-func (c *GLContext) findTexture(id int) *GLTexture {
+func (c *glContext) findTexture(id int) *glTexture {
 	for _, texture := range c.textures {
 		if texture.id == id {
 			return texture
@@ -125,9 +125,9 @@ func (c *GLContext) findTexture(id int) *GLTexture {
 	return nil
 }
 
-func (c *GLContext) deleteTexture(id int) error {
+func (c *glContext) deleteTexture(id int) error {
 	tex := c.findTexture(id)
-	if tex != nil && (tex.flags&IMAGE_NODELETE) == 0 {
+	if tex != nil && (tex.flags&glnvg_IMAGE_NODELETE) == 0 {
 		gl.DeleteTexture(tex.tex)
 		tex.id = 0
 		return nil
@@ -135,7 +135,7 @@ func (c *GLContext) deleteTexture(id int) error {
 	return errors.New("can't find texture")
 }
 
-func (c *GLContext) bindTexture(tex *gl.Texture) {
+func (c *glContext) bindTexture(tex *gl.Texture) {
 	if tex == nil {
 		gl.BindTexture(gl.TEXTURE_2D, gl.Texture{})
 	} else {
@@ -143,14 +143,14 @@ func (c *GLContext) bindTexture(tex *gl.Texture) {
 	}
 }
 
-func (c *GLContext) setStencilMask(mask uint32) {
+func (c *glContext) setStencilMask(mask uint32) {
 	if c.stencilMask != mask {
 		c.stencilMask = mask
 		gl.StencilMask(mask)
 	}
 }
 
-func (c *GLContext) setStencilFunc(fun gl.Enum, ref int, mask uint32) {
+func (c *glContext) setStencilFunc(fun gl.Enum, ref int, mask uint32) {
 	if c.stencilFunc != fun || c.stencilFuncRef != ref || c.stencilFuncMask != mask {
 		c.stencilFunc = fun
 		c.stencilFuncRef = ref
@@ -159,7 +159,7 @@ func (c *GLContext) setStencilFunc(fun gl.Enum, ref int, mask uint32) {
 	}
 }
 
-func (c *GLContext) checkError(str string) {
+func (c *glContext) checkError(str string) {
 	if c.flags&DEBUG == 0 {
 		return
 	}
@@ -169,33 +169,33 @@ func (c *GLContext) checkError(str string) {
 	}
 }
 
-func (c *GLContext) appendVertex(vertexes []Vertex) {
-	oldCount := len(c.vertexes)
-	c.vertexes = append(c.vertexes, make([]byte, 4*4*len(vertexes))...)
-	offset := c.vertexes[oldCount:]
+func (c *glContext) appendVertex(vertexes []nvgVertex) {
+	offset := len(c.vertexes)
+	c.vertexes = append(c.vertexes, make([]byte, 16*len(vertexes))...)
+	subVertexes := c.vertexes[offset:]
 	for i := range vertexes {
 		vertex := &(vertexes[i])
-		binary.LittleEndian.PutUint32(offset[i*4*4:], math.Float32bits(vertex.x))
-		binary.LittleEndian.PutUint32(offset[i*4*4+4:], math.Float32bits(vertex.y))
-		binary.LittleEndian.PutUint32(offset[i*4*4+8:], math.Float32bits(vertex.u))
-		binary.LittleEndian.PutUint32(offset[i*4*4+12:], math.Float32bits(vertex.v))
+		binary.LittleEndian.PutUint32(subVertexes[i*4*4:], math.Float32bits(vertex.x))
+		binary.LittleEndian.PutUint32(subVertexes[i*4*4+4:], math.Float32bits(vertex.y))
+		binary.LittleEndian.PutUint32(subVertexes[i*4*4+8:], math.Float32bits(vertex.u))
+		binary.LittleEndian.PutUint32(subVertexes[i*4*4+12:], math.Float32bits(vertex.v))
 	}
 }
 
-func (c *GLContext) allocFragUniforms(n int) ([]GLFragUniforms, int) {
+func (c *glContext) allocFragUniforms(n int) ([]glFragUniforms, int) {
 	ret := len(c.uniforms)
-	c.uniforms = append(c.uniforms, make([]GLFragUniforms, n)...)
+	c.uniforms = append(c.uniforms, make([]glFragUniforms, n)...)
 	return c.uniforms[ret:], ret
 }
 
-func (c *GLContext) allocPath(n int) ([]GLPath, int) {
+func (c *glContext) allocPath(n int) ([]glPath, int) {
 	ret := len(c.paths)
-	c.paths = append(c.paths, make([]GLPath, n)...)
+	c.paths = append(c.paths, make([]glPath, n)...)
 	return c.paths[ret:], ret
 }
 
-func (c *GLContext) allocTexture() *GLTexture {
-	var tex *GLTexture
+func (c *glContext) allocTexture() *glTexture {
+	var tex *glTexture
 	for _, texture := range c.textures {
 		if texture.id == 0 {
 			tex = texture
@@ -203,7 +203,7 @@ func (c *GLContext) allocTexture() *GLTexture {
 		}
 	}
 	if tex == nil {
-		tex = &GLTexture{}
+		tex = &glTexture{}
 		c.textures = append(c.textures, tex)
 	}
 	c.textureId += 1
@@ -211,7 +211,7 @@ func (c *GLContext) allocTexture() *GLTexture {
 	return tex
 }
 
-func (c *GLContext) convertPaint(frag *GLFragUniforms, paint *Paint, scissor *Scissor, width, fringe, strokeThr float32) error {
+func (c *glContext) convertPaint(frag *glFragUniforms, paint *Paint, scissor *nvgScissor, width, fringe, strokeThr float32) error {
 	frag.setInnerColor(paint.innerColor.PreMultiply())
 	frag.setOuterColor(paint.outerColor.PreMultiply())
 
@@ -243,7 +243,7 @@ func (c *GLContext) convertPaint(frag *GLFragUniforms, paint *Paint, scissor *Sc
 		} else {
 			frag.setPaintMat(paint.xform.Inverse().ToMat3x4())
 		}
-		frag.setType(NSVG_SHADER_FILLIMG)
+		frag.setType(nsvg_SHADER_FILLIMG)
 
 		if tex.texType == nvg_TEXTURE_RGBA {
 			if tex.flags&IMAGE_PREMULTIPLIED != 0 {
@@ -255,7 +255,7 @@ func (c *GLContext) convertPaint(frag *GLFragUniforms, paint *Paint, scissor *Sc
 			frag.setTexType(2)
 		}
 	} else {
-		frag.setType(NSVG_SHADER_FILLGRAD)
+		frag.setType(nsvg_SHADER_FILLGRAD)
 		frag.setRadius(paint.radius)
 		frag.setFeather(paint.feather)
 		frag.setPaintMat(paint.xform.Inverse().ToMat3x4())
@@ -263,9 +263,9 @@ func (c *GLContext) convertPaint(frag *GLFragUniforms, paint *Paint, scissor *Sc
 	return nil
 }
 
-func (c *GLContext) setUniforms(uniformOffset, image int) {
+func (c *glContext) setUniforms(uniformOffset, image int) {
 	frag := c.uniforms[uniformOffset]
-	gl.Uniform4fv(c.shader.locations[GLNVG_LOC_FRAG], frag[:])
+	gl.Uniform4fv(c.shader.locations[glnvg_LOC_FRAG], frag[:])
 
 	if image != 0 {
 		c.bindTexture(&c.findTexture(image).tex)
@@ -275,7 +275,7 @@ func (c *GLContext) setUniforms(uniformOffset, image int) {
 	}
 }
 
-func (c *GLContext) fill(call *GLCall) {
+func (c *glContext) fill(call *glCall) {
 	paths := c.paths[call.pathOffset : call.pathOffset+call.pathCount]
 
 	// Draw shapes
@@ -319,7 +319,7 @@ func (c *GLContext) fill(call *GLCall) {
 	gl.Disable(gl.STENCIL_TEST)
 }
 
-func (c *GLContext) convexFill(call *GLCall) {
+func (c *glContext) convexFill(call *glCall) {
 	paths := c.paths[call.pathOffset : call.pathOffset+call.pathCount]
 
 	c.setUniforms(call.uniformOffset, call.image)
@@ -336,7 +336,7 @@ func (c *GLContext) convexFill(call *GLCall) {
 	}
 }
 
-func (c *GLContext) stroke(call *GLCall) {
+func (c *glContext) stroke(call *glCall) {
 	paths := c.paths[call.pathOffset : call.pathOffset+call.pathCount]
 
 	if c.flags&STENCIL_STROKES != 0 {
@@ -379,39 +379,22 @@ func (c *GLContext) stroke(call *GLCall) {
 	}
 }
 
-func (c *GLContext) triangles(call *GLCall) {
+func (c *glContext) triangles(call *glCall) {
 	c.setUniforms(call.uniformOffset, call.image)
 	checkError(c, "triangles fill")
 	gl.DrawArrays(gl.TRIANGLE_STRIP, call.triangleOffset, call.triangleCount)
 }
 
-type GLParams struct {
+type glParams struct {
 	isEdgeAntiAlias bool
-	context         *GLContext
+	context         *glContext
 }
 
-func nearestPow2(num int) int {
-	var n uint
-	uNum := uint(num)
-	if uNum > 0 {
-		n = uNum - 1
-	} else {
-		n = 0
-	}
-	n |= n >> 1
-	n |= n >> 2
-	n |= n >> 4
-	n |= n >> 8
-	n |= n >> 16
-	n++
-	return int(num)
-}
-
-func (p *GLParams) edgeAntiAlias() bool {
+func (p *glParams) edgeAntiAlias() bool {
 	return p.isEdgeAntiAlias
 }
 
-func (p *GLParams) create() error {
+func (p *glParams) renderCreate() error {
 	context := p.context
 	//align := 4
 
@@ -438,7 +421,7 @@ func (p *GLParams) create() error {
 	return nil
 }
 
-func (p *GLParams) createTexture(texType nvgTextureType, w, h int, flags ImageFlags, data []byte) int {
+func (p *glParams) renderCreateTexture(texType nvgTextureType, w, h int, flags ImageFlags, data []byte) int {
 	if nearestPow2(w) != w || nearestPow2(h) != h {
 		if (flags&IMAGE_REPEATX) != 0 || (flags&IMAGE_REPEATY) != 0 {
 			log.Printf("Repeat X/Y is not supported for non power-of-two textures (%d x %d)\n", w, h)
@@ -496,9 +479,9 @@ func (p *GLParams) createTexture(texType nvgTextureType, w, h int, flags ImageFl
 	return tex.id
 }
 
-func (p *GLParams) deleteTexture(id int) error {
+func (p *glParams) renderDeleteTexture(id int) error {
 	tex := p.context.findTexture(id)
-	if tex.tex.Valid() && (tex.flags&IMAGE_NODELETE) == 0 {
+	if tex.tex.Valid() && (tex.flags&glnvg_IMAGE_NODELETE) == 0 {
 		gl.DeleteTexture(tex.tex)
 		tex.id = 0
 		tex.tex = gl.Texture{}
@@ -507,7 +490,7 @@ func (p *GLParams) deleteTexture(id int) error {
 	return errors.New("invalid texture in GLParams.deleteTexture")
 }
 
-func (p *GLParams) updateTexture(image, x, y, w, h int, data []byte) error {
+func (p *glParams) renderUpdateTexture(image, x, y, w, h int, data []byte) error {
 	tex := p.context.findTexture(image)
 	if tex == nil {
 		return errors.New("invalid texture in GLParams.updateTexture")
@@ -536,7 +519,7 @@ func (p *GLParams) updateTexture(image, x, y, w, h int, data []byte) error {
 	return nil
 }
 
-func (p *GLParams) getTextureSize(image int) (int, int, error) {
+func (p *glParams) renderGetTextureSize(image int) (int, int, error) {
 	tex := p.context.findTexture(image)
 	if tex == nil {
 		return -1, -1, errors.New("invalid texture in GLParams.getTextureSize")
@@ -544,12 +527,12 @@ func (p *GLParams) getTextureSize(image int) (int, int, error) {
 	return tex.width, tex.height, nil
 }
 
-func (p *GLParams) viewport(width, height int) {
+func (p *glParams) renderViewport(width, height int) {
 	p.context.view[0] = float32(width)
 	p.context.view[1] = float32(height)
 }
 
-func (p *GLParams) cancel() {
+func (p *glParams) renderCancel() {
 	c := p.context
 	c.vertexes = c.vertexes[:0]
 	c.paths = c.paths[:0]
@@ -557,7 +540,7 @@ func (p *GLParams) cancel() {
 	c.uniforms = c.uniforms[:0]
 }
 
-func (p *GLParams) flush() {
+func (p *glParams) renderFlush() {
 	c := p.context
 
 	if len(c.calls) > 0 {
@@ -590,19 +573,19 @@ func (p *GLParams) flush() {
 		gl.VertexAttribPointer(gl.Attrib{1}, 2, gl.FLOAT, false, 4*4, 8)
 
 		// Set view and texture just once per frame.
-		gl.Uniform1i(c.shader.locations[GLNVG_LOC_TEX], 0)
-		gl.Uniform2fv(c.shader.locations[GLNVG_LOC_VIEWSIZE], c.view[:])
+		gl.Uniform1i(c.shader.locations[glnvg_LOC_TEX], 0)
+		gl.Uniform2fv(c.shader.locations[glnvg_LOC_VIEWSIZE], c.view[:])
 
 		for i := range c.calls {
 			call := &c.calls[i]
 			switch call.callType {
-			case GLNVG_FILL:
+			case glnvg_FILL:
 				c.fill(call)
-			case GLNVG_CONVEXFILL:
+			case glnvg_CONVEXFILL:
 				c.convexFill(call)
-			case GLNVG_STROKE:
+			case glnvg_STROKE:
 				c.stroke(call)
-			case GLNVG_TRIANGLES:
+			case glnvg_TRIANGLES:
 				c.triangles(call)
 			}
 		}
@@ -619,25 +602,26 @@ func (p *GLParams) flush() {
 	c.uniforms = c.uniforms[:0]
 }
 
-func (p *GLParams) fill(paint *Paint, scissor *Scissor, fringe float32, bounds [4]float32, paths []Path) {
+func (p *glParams) renderFill(paint *Paint, scissor *nvgScissor, fringe float32, bounds [4]float32, paths []nvgPath) {
 	c := p.context
-	var glPaths []GLPath
-	p.context.calls = append(c.calls, GLCall{})
+	var glPaths []glPath
+	c.calls = append(c.calls, glCall{
+		pathCount: len(paths),
+		image:     paint.image,
+	})
 	call := &c.calls[len(c.calls)-1]
-	glPaths, call.pathOffset = c.allocPath(len(paths))
-	call.pathCount = len(paths)
-	call.image = paint.image
+	glPaths, call.pathOffset = c.allocPath(call.pathCount)
 
 	if len(paths) > 0 && paths[0].convex {
-		call.callType = GLNVG_CONVEXFILL
+		call.callType = glnvg_CONVEXFILL
 	} else {
-		call.callType = GLNVG_FILL
+		call.callType = glnvg_FILL
 	}
 
 	// Allocate vertices for all the paths
-	newVertexes := make([]Vertex, maxVertexCount(paths)+6)
+	newVertexes := make([]nvgVertex, maxVertexCount(paths)+6)
 	vertexes := newVertexes[:]
-	vertexOffset := len(c.vertexes)
+	vertexOffset := len(c.vertexes) / 16 // c.vertexes is []byte, but data unit is [4]float32
 
 	for i := range paths {
 		glPath := &glPaths[i]
@@ -671,30 +655,30 @@ func (p *GLParams) fill(paint *Paint, scissor *Scissor, fringe float32, bounds [
 	// Quad
 	call.triangleOffset = vertexOffset
 	call.triangleCount = 6
-	vertexes[0] = Vertex{bounds[0], bounds[3], 0.5, 1.0}
-	vertexes[1] = Vertex{bounds[2], bounds[3], 0.5, 1.0}
-	vertexes[2] = Vertex{bounds[2], bounds[1], 0.5, 1.0}
+	vertexes[0] = nvgVertex{bounds[0], bounds[3], 0.5, 1.0}
+	vertexes[1] = nvgVertex{bounds[2], bounds[3], 0.5, 1.0}
+	vertexes[2] = nvgVertex{bounds[2], bounds[1], 0.5, 1.0}
 
-	vertexes[3] = Vertex{bounds[0], bounds[3], 0.5, 1.0}
-	vertexes[4] = Vertex{bounds[2], bounds[1], 0.5, 1.0}
-	vertexes[5] = Vertex{bounds[0], bounds[1], 0.5, 1.0}
+	vertexes[3] = nvgVertex{bounds[0], bounds[3], 0.5, 1.0}
+	vertexes[4] = nvgVertex{bounds[2], bounds[1], 0.5, 1.0}
+	vertexes[5] = nvgVertex{bounds[0], bounds[1], 0.5, 1.0}
 
 	// Register all new vertexes to GLContext as []byte for OpenGL API
 	c.appendVertex(newVertexes)
 
 	// Setup uniforms for draw calls
-	var paintUniform *GLFragUniforms
-	if call.callType == GLNVG_FILL {
-		var uniforms []GLFragUniforms
+	var paintUniform *glFragUniforms
+	if call.callType == glnvg_FILL {
+		var uniforms []glFragUniforms
 		uniforms, call.uniformOffset = c.allocFragUniforms(2)
 		// Simple shader for stencil
 		u0 := &uniforms[0]
 		u0.reset()
 		u0.setStrokeThr(-1.0)
-		u0.setType(NSVG_SHADER_SIMPLE)
+		u0.setType(nsvg_SHADER_SIMPLE)
 		paintUniform = &uniforms[1]
 	} else {
-		var uniforms []GLFragUniforms
+		var uniforms []glFragUniforms
 		uniforms, call.uniformOffset = c.allocFragUniforms(1)
 		paintUniform = &uniforms[0]
 	}
@@ -703,20 +687,20 @@ func (p *GLParams) fill(paint *Paint, scissor *Scissor, fringe float32, bounds [
 	c.convertPaint(paintUniform, paint, scissor, fringe, fringe, -1.0)
 }
 
-func (p *GLParams) stroke(paint *Paint, scissor *Scissor, fringe float32, strokeWidth float32, paths []Path) {
+func (p *glParams) renderStroke(paint *Paint, scissor *nvgScissor, fringe float32, strokeWidth float32, paths []nvgPath) {
 	c := p.context
-	var glPaths []GLPath
-	p.context.calls = append(c.calls, GLCall{})
+	var glPaths []glPath
+	p.context.calls = append(c.calls, glCall{})
 	call := &c.calls[len(c.calls)-1]
-	call.callType = GLNVG_STROKE
+	call.callType = glnvg_STROKE
 	glPaths, call.pathOffset = c.allocPath(len(paths))
 	call.pathCount = len(paths)
 	call.image = paint.image
 
 	// Allocate vertices for all the paths
-	newVertexes := make([]Vertex, maxVertexCount(paths))
+	newVertexes := make([]nvgVertex, maxVertexCount(paths))
 	vertexes := newVertexes[:]
-	vertexOffset := len(c.vertexes)
+	vertexOffset := len(c.vertexes) / 16 // c.vertexes is []byte, but data unit is [4]float32
 
 	for i := range paths {
 		glPath := &glPaths[i]
@@ -740,7 +724,7 @@ func (p *GLParams) stroke(paint *Paint, scissor *Scissor, fringe float32, stroke
 
 	// Fill shader
 	if c.flags&STENCIL_STROKES != 0 {
-		var uniforms []GLFragUniforms
+		var uniforms []glFragUniforms
 		uniforms, call.uniformOffset = c.allocFragUniforms(2)
 		u0 := &uniforms[0]
 		u0.reset()
@@ -749,7 +733,7 @@ func (p *GLParams) stroke(paint *Paint, scissor *Scissor, fringe float32, stroke
 		u1.reset()
 		c.convertPaint(u1, paint, scissor, strokeWidth, fringe, -1.0-0.5/266.0)
 	} else {
-		var uniforms []GLFragUniforms
+		var uniforms []glFragUniforms
 		uniforms, call.uniformOffset = c.allocFragUniforms(1)
 		u0 := &uniforms[0]
 		u0.reset()
@@ -757,35 +741,35 @@ func (p *GLParams) stroke(paint *Paint, scissor *Scissor, fringe float32, stroke
 	}
 }
 
-func (p *GLParams) triangles(paint *Paint, scissor *Scissor, vertexes []Vertex) {
+func (p *glParams) renderTriangles(paint *Paint, scissor *nvgScissor, vertexes []nvgVertex) {
 	c := p.context
-	p.context.calls = append(c.calls, GLCall{})
+	p.context.calls = append(c.calls, glCall{})
 	call := &c.calls[len(c.calls)-1]
-	call.callType = GLNVG_TRIANGLES
+	call.callType = glnvg_TRIANGLES
 	call.image = paint.image
 
-	call.triangleOffset = len(c.vertexes)
+	call.triangleOffset = len(c.vertexes) / 16 // c.vertexes is []byte, but data unit is [4]float32
 	call.triangleCount = len(vertexes)
 
 	c.appendVertex(vertexes)
 
 	// Fill shader
-	var uniforms []GLFragUniforms
+	var uniforms []glFragUniforms
 	uniforms, call.uniformOffset = c.allocFragUniforms(1)
 	u0 := &uniforms[0]
 	u0.reset()
 	c.convertPaint(u0, paint, scissor, 1.0, 1.0, -1.0)
-	u0.setType(NSVG_SHADER_IMG)
+	u0.setType(nsvg_SHADER_IMG)
 }
 
-func (p *GLParams) delete() {
+func (p *glParams) renderDelete() {
 	c := p.context
 	c.shader.deleteShader()
 	if c.vertexBuffer.Valid() {
 		gl.DeleteBuffer(c.vertexBuffer)
 	}
 	for _, texture := range c.textures {
-		if texture.tex.Valid() && (texture.flags&IMAGE_NODELETE) == 0 {
+		if texture.tex.Valid() && (texture.flags&glnvg_IMAGE_NODELETE) == 0 {
 			gl.DeleteTexture(texture.tex)
 		}
 	}
@@ -806,22 +790,22 @@ func dumpProgramError(program gl.Program, name string) error {
 	return errors.New(msg)
 }
 
-func checkError(p *GLContext, str string) {
+func checkError(p *glContext, str string) {
 	if p.flags&DEBUG == 0 {
 		return
 	}
 	err := gl.GetError()
 	if err != gl.NO_ERROR {
 		log.Printf("Error %08x after %s\n", int(err), str)
-		panic("")
 	}
 }
 
-func maxVertexCount(paths []Path) int {
+func maxVertexCount(paths []nvgPath) int {
 	count := 0
 	for i := range paths {
-		count += len(paths[i].fills)
-		count += len(paths[i].strokes)
+		path := &paths[i]
+		count += len(path.fills)
+		count += len(path.strokes)
 	}
 	return count
 }

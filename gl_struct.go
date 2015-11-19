@@ -5,24 +5,24 @@ import (
 )
 
 const (
-	NSVG_SHADER_FILLGRAD = iota
-	NSVG_SHADER_FILLIMG
-	NSVG_SHADER_SIMPLE
-	NSVG_SHADER_IMG
+	nsvg_SHADER_FILLGRAD = iota
+	nsvg_SHADER_FILLIMG
+	nsvg_SHADER_SIMPLE
+	nsvg_SHADER_IMG
 )
 
-type GLNVGcallType int
+type glnvgCallType int
 
 const (
-	GLNVG_NONE GLNVGcallType = iota
-	GLNVG_FILL
-	GLNVG_CONVEXFILL
-	GLNVG_STROKE
-	GLNVG_TRIANGLES
+	glnvg_NONE glnvgCallType = iota
+	glnvg_FILL
+	glnvg_CONVEXFILL
+	glnvg_STROKE
+	glnvg_TRIANGLES
 )
 
-type GLCall struct {
-	callType       GLNVGcallType
+type glCall struct {
+	callType       glnvgCallType
 	image          int
 	pathOffset     int
 	pathCount      int
@@ -31,76 +31,76 @@ type GLCall struct {
 	uniformOffset  int
 }
 
-type GLPath struct {
+type glPath struct {
 	fillOffset   int
 	fillCount    int
 	strokeOffset int
 	strokeCount  int
 }
 
-type GLFragUniforms [44]float32
+type glFragUniforms [44]float32
 
-func (u *GLFragUniforms) reset() {
+func (u *glFragUniforms) reset() {
 	for i := 0; i < 44; i++ {
 		u[i] = 0
 	}
 }
 
-func (u *GLFragUniforms) setScissorMat(mat []float32) {
+func (u *glFragUniforms) setScissorMat(mat []float32) {
 	copy(u[0:12][:], mat[0:12])
 }
 
-func (u *GLFragUniforms) setPaintMat(mat []float32) {
+func (u *glFragUniforms) setPaintMat(mat []float32) {
 	copy(u[12:24], mat[0:12])
 }
 
-func (u *GLFragUniforms) setInnerColor(color Color) {
+func (u *glFragUniforms) setInnerColor(color Color) {
 	copy(u[24:28], color.List())
 }
 
-func (u *GLFragUniforms) setOuterColor(color Color) {
+func (u *glFragUniforms) setOuterColor(color Color) {
 	copy(u[28:32], color.List())
 }
 
-func (u *GLFragUniforms) setScissorExt(a, b float32) {
+func (u *glFragUniforms) setScissorExt(a, b float32) {
 	u[32] = a
 	u[33] = b
 }
 
-func (u *GLFragUniforms) setScissorScale(a, b float32) {
+func (u *glFragUniforms) setScissorScale(a, b float32) {
 	u[34] = a
 	u[35] = b
 }
 
-func (u *GLFragUniforms) setExtent(ext [2]float32) {
+func (u *glFragUniforms) setExtent(ext [2]float32) {
 	copy(u[36:38], ext[:])
 }
 
-func (u *GLFragUniforms) setRadius(radius float32) {
+func (u *glFragUniforms) setRadius(radius float32) {
 	u[38] = radius
 }
 
-func (u *GLFragUniforms) setFeather(feather float32) {
+func (u *glFragUniforms) setFeather(feather float32) {
 	u[39] = feather
 }
 
-func (u *GLFragUniforms) setStrokeMult(strokeMult float32) {
+func (u *glFragUniforms) setStrokeMult(strokeMult float32) {
 	u[40] = strokeMult
 }
 
-func (u *GLFragUniforms) setStrokeThr(strokeThr float32) {
+func (u *glFragUniforms) setStrokeThr(strokeThr float32) {
 	u[41] = strokeThr
 }
 
-func (u *GLFragUniforms) setTexType(texType float32) {
+func (u *glFragUniforms) setTexType(texType float32) {
 	u[42] = texType
 }
 
-func (u *GLFragUniforms) setType(typeCode float32) {
+func (u *glFragUniforms) setType(typeCode float32) {
 	u[43] = typeCode
 }
 
-type GLTexture struct {
+type glTexture struct {
 	id            int
 	tex           gl.Texture
 	width, height int

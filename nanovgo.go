@@ -7,33 +7,16 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"log"
-	"math"
 	"os"
 )
 
-type Params interface {
-	edgeAntiAlias() bool
-	create() error
-	createTexture(texType nvgTextureType, w, h int, flags ImageFlags, data []byte) int
-	deleteTexture(image int) error
-	updateTexture(image, x, y, w, h int, data []byte) error
-	getTextureSize(image int) (int, int, error)
-	viewport(width, height int)
-	cancel()
-	flush()
-	fill(paint *Paint, scissor *Scissor, fringe float32, bounds [4]float32, paths []Path)
-	stroke(paint *Paint, scissor *Scissor, fringe float32, strokeWidth float32, paths []Path)
-	triangles(paint *Paint, scissor *Scissor, vertexes []Vertex)
-	delete()
-}
-
 type Context struct {
-	params         Params
+	params         nvgParams
 	commands       []float32
 	commandX       float32
 	commandY       float32
-	states         []State
-	cache          PathCache
+	states         []nvgState
+	cache          nvgPathCache
 	tessTol        float32
 	distTol        float32
 	fringeWidth    float32
@@ -55,7 +38,7 @@ func (c *Context) Delete() {
 			c.fontImages[i] = 0
 		}
 	}
-	c.params.delete()
+	c.params.renderDelete()
 }
 
 func (c *Context) BeginFrame(windowWidth, windowHeight int, devicePixelRatio float32) {
@@ -66,7 +49,7 @@ func (c *Context) BeginFrame(windowWidth, windowHeight int, devicePixelRatio flo
 	c.Save()
 	c.Reset()
 
-	c.params.viewport(windowWidth, windowHeight)
+	c.params.renderViewport(windowWidth, windowHeight)
 
 	c.drawCallCount = 0
 	c.fillTriCount = 0
@@ -75,11 +58,11 @@ func (c *Context) BeginFrame(windowWidth, windowHeight int, devicePixelRatio flo
 }
 
 func (c *Context) CancelFrame() {
-	c.params.cancel()
+	c.params.renderCancel()
 }
 
 func (c *Context) EndFrame() {
-	c.params.flush()
+	c.params.renderFlush()
 	if c.fontImageIdx != 0 {
 		fontImage := c.fontImages[c.fontImageIdx]
 		if fontImage == 0 {
@@ -117,7 +100,7 @@ func (c *Context) Save() {
 	if len(c.states) > 0 {
 		c.states = append(c.states, c.states[len(c.states)-1])
 	} else {
-		c.states = append(c.states, State{})
+		c.states = append(c.states, nvgState{})
 	}
 }
 
@@ -266,77 +249,15 @@ func (c *Context) CreateImageFromGoImage(imageFlag ImageFlags, img image.Image) 
 }
 
 func (c *Context) CreateImageRGBA(w, h int, imageFlags ImageFlags, data []byte) int {
-	return c.params.createTexture(nvg_TEXTURE_RGBA, w, h, imageFlags, data)
+	return c.params.renderCreateTexture(nvg_TEXTURE_RGBA, w, h, imageFlags, data)
 }
 
 func (c *Context) ImageSize(img int) (int, int, error) {
-	return c.params.getTextureSize(img)
+	return c.params.renderGetTextureSize(img)
 }
 
 func (c *Context) DeleteImage(img int) {
-	c.params.deleteTexture(img)
-}
-
-func (c *Context) LinearGradient(sx, sy, ex, ey float32, iColor, oColor Color) Paint {
-	var large float32 = 1e5
-	dx := ex - sx
-	dy := ey - sy
-	d := float32(math.Sqrt(float64(dx*dx + dy*dy)))
-	if d > 0.0001 {
-		dx /= d
-		dy /= d
-	} else {
-		dx = 0.0
-		dy = 1.0
-	}
-
-	return Paint{
-		xform:      TransformMatrix{dy, -dx, dx, dy, sx - dx * large, sy - dy * large},
-		extent:     [2]float32{large, large + d * 0.5},
-		radius:     0.0,
-		feather:    maxF(1.0, d),
-		innerColor: iColor,
-		outerColor: oColor,
-	}
-}
-
-func (c *Context) RadialGradient(cx, cy, inR, outR float32, iColor, oColor Color) Paint {
-	r := (inR + outR) * 0.5
-	f := outR - inR
-
-	return Paint{
-		xform:      TransformMatrixTranslate(cx, cy),
-		extent:     [2]float32{r, r},
-		radius:     0.0,
-		feather:    maxF(1.0, f),
-		innerColor: iColor,
-		outerColor: oColor,
-	}
-}
-
-func (c *Context) BoxGradient(x, y, w, h, r, f float32, iColor, oColor Color) Paint {
-	return Paint{
-		xform:      TransformMatrixTranslate(x+w*0.5, y+h*0.5),
-		extent:     [2]float32{w * 0.5, h * 0.5},
-		radius:     r,
-		feather:    maxF(1.0, f),
-		innerColor: iColor,
-		outerColor: oColor,
-	}
-}
-
-func (c *Context) ImagePattern(cx, cy, w, h, angle float32, img int, alpha float32) Paint {
-	xform := TransformMatrixRotate(angle)
-	xform[4] = cx
-	xform[5] = cy
-	color := RGBAf(1, 1, 1, alpha)
-	return Paint{
-		xform:      xform,
-		extent:     [2]float32{w, h},
-		image:      img,
-		innerColor: color,
-		outerColor: color,
-	}
+	c.params.renderDeleteTexture(img)
 }
 
 func (c *Context) Scissor(x, y, w, h float32) {
@@ -601,7 +522,7 @@ func (c *Context) Fill() {
 	fillPaint.innerColor.A *= state.alpha
 	fillPaint.outerColor.A *= state.alpha
 
-	c.params.fill(&fillPaint, &state.scissor, c.fringeWidth, c.cache.bounds, c.cache.paths)
+	c.params.renderFill(&fillPaint, &state.scissor, c.fringeWidth, c.cache.bounds, c.cache.paths)
 
 	// Count triangles
 	for i := 0; i < len(c.cache.paths); i++ {
@@ -636,7 +557,7 @@ func (c *Context) Stroke() {
 	} else {
 		c.cache.expandStroke(c.fringeWidth*0.5, state.lineCap, state.lineJoin, state.miterLimit, c.fringeWidth, c.tessTol)
 	}
-	c.params.stroke(&strokePaint, &state.scissor, c.fringeWidth, strokeWidth, c.cache.paths)
+	c.params.renderStroke(&strokePaint, &state.scissor, c.fringeWidth, strokeWidth, c.cache.paths)
 
 	// Count triangles
 	for i := 0; i < len(c.cache.paths); i++ {
@@ -646,26 +567,26 @@ func (c *Context) Stroke() {
 	}
 }
 
-func createInternal(params Params) (*Context, error) {
+func createInternal(params nvgParams) (*Context, error) {
 	context := &Context{
 		params:     params,
-		states:     make([]State, 0, nvg_MAX_STATES),
+		states:     make([]nvgState, 0, nvg_MAX_STATES),
 		fontImages: make([]int, nvg_MAX_FONTIMAGES),
 		commands:   make([]float32, 0, nvg_INIT_COMMANDS_SIZE),
-		cache: PathCache{
-			points:   make([]Point, 0, nvg_INIT_POINTS_SIZE),
-			paths:    make([]Path, 0, nvg_INIT_PATHS_SIZE),
-			vertexes: make([]Vertex, 0, nvg_INIT_VERTS_SIZE),
+		cache: nvgPathCache{
+			points:   make([]nvgPoint, 0, nvg_INIT_POINTS_SIZE),
+			paths:    make([]nvgPath, 0, nvg_INIT_PATHS_SIZE),
+			vertexes: make([]nvgVertex, 0, nvg_INIT_VERTS_SIZE),
 		},
 	}
 	context.Save()
 	context.Reset()
 	context.setDevicePixelRatio(1.0)
-	context.params.create()
+	context.params.renderCreate()
 
 	context.fs = fontstashmini.New(nvg_INIT_FONTIMAGE_SIZE, nvg_INIT_FONTIMAGE_SIZE)
 
-	context.fontImages[0] = context.params.createTexture(nvg_TEXTURE_ALPHA, nvg_INIT_FONTIMAGE_SIZE, nvg_INIT_FONTIMAGE_SIZE, 0, nil)
+	context.fontImages[0] = context.params.renderCreateTexture(nvg_TEXTURE_ALPHA, nvg_INIT_FONTIMAGE_SIZE, nvg_INIT_FONTIMAGE_SIZE, 0, nil)
 	context.fontImageIdx = 0
 
 	return context, nil
@@ -678,7 +599,7 @@ func (c *Context) setDevicePixelRatio(ratio float32) {
 	c.devicePxRatio = ratio
 }
 
-func (c *Context) getState() *State {
+func (c *Context) getState() *nvgState {
 	return &c.states[len(c.states)-1]
 }
 
@@ -717,7 +638,7 @@ func (c *Context) appendCommand(vals []float32) {
 }
 
 func (c *Context) flattenPaths() {
-	cache := c.cache
+	cache := &c.cache
 	if len(cache.paths) > 0 {
 		return
 	}
@@ -753,10 +674,10 @@ func (c *Context) flattenPaths() {
 		}
 	}
 
-	c.cache.bounds = [4]float32{1e6, 1e6, -1e6, -1e6}
+	cache.bounds = [4]float32{1e6, 1e6, -1e6, -1e6}
 
 	// Calculate the direction and length of line segments.
-	for j := 0; j < len(c.cache.paths); j++ {
+	for j := 0; j < len(cache.paths); j++ {
 		path := &cache.paths[j]
 		points := cache.points[path.first:]
 		p0 := &points[path.count-1]
@@ -790,7 +711,10 @@ func (c *Context) flattenPaths() {
 			}
 			// Advance
 			p1Index++
-			p0 = &points[p1Index]
+			p0 = p1
+			if len(points) != p1Index {
+				p1 = &points[p1Index]
+			}
 		}
 	}
 }

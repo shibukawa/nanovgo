@@ -1,28 +1,22 @@
 package nanovgo
 
-type Paint struct {
-	xform      TransformMatrix
-	extent     [2]float32
-	radius     float32
-	feather    float32
-	innerColor Color
-	outerColor Color
-	image      int
+type nvgParams interface {
+	edgeAntiAlias() bool
+	renderCreate() error
+	renderCreateTexture(texType nvgTextureType, w, h int, flags ImageFlags, data []byte) int
+	renderDeleteTexture(image int) error
+	renderUpdateTexture(image, x, y, w, h int, data []byte) error
+	renderGetTextureSize(image int) (int, int, error)
+	renderViewport(width, height int)
+	renderCancel()
+	renderFlush()
+	renderFill(paint *Paint, scissor *nvgScissor, fringe float32, bounds [4]float32, paths []nvgPath)
+	renderStroke(paint *Paint, scissor *nvgScissor, fringe float32, strokeWidth float32, paths []nvgPath)
+	renderTriangles(paint *Paint, scissor *nvgScissor, vertexes []nvgVertex)
+	renderDelete()
 }
 
-func (p *Paint) setPaintColor(color Color) {
-	p.xform.Identity()
-	p.extent[0] = 0.0
-	p.extent[1] = 0.0
-	p.radius = 0.0
-	p.feather = 1.0
-	p.innerColor = color
-	p.outerColor = color
-	p.outerColor = color
-	p.image = 0
-}
-
-type Point struct {
+type nvgPoint struct {
 	x, y     float32
 	dx, dy   float32
 	len      float32
@@ -30,34 +24,34 @@ type Point struct {
 	flags    nvgPointFlags
 }
 
-type Vertex struct {
+type nvgVertex struct {
 	x, y, u, v float32
 }
 
-func (vtx *Vertex) set(x, y, u, v float32) {
+func (vtx *nvgVertex) set(x, y, u, v float32) {
 	vtx.x = x
 	vtx.y = y
 	vtx.u = u
 	vtx.v = v
 }
 
-type Path struct {
+type nvgPath struct {
 	first   int
 	count   int
 	closed  bool
 	nBevel  int
-	fills   []Vertex
-	strokes []Vertex
+	fills   []nvgVertex
+	strokes []nvgVertex
 	winding Winding
 	convex  bool
 }
 
-type Scissor struct {
+type nvgScissor struct {
 	xform  TransformMatrix
 	extent [2]float32
 }
 
-type State struct {
+type nvgState struct {
 	fill, stroke  Paint
 	strokeWidth   float32
 	miterLimit    float32
@@ -65,7 +59,7 @@ type State struct {
 	lineCap       LineCap
 	alpha         float32
 	xform         TransformMatrix
-	scissor       Scissor
+	scissor       nvgScissor
 	fontSize      float32
 	letterSpacing float32
 	lineHeight    float32
@@ -74,7 +68,7 @@ type State struct {
 	fontId        int
 }
 
-func (s *State) reset() {
+func (s *nvgState) reset() {
 	s.fill.setPaintColor(RGBA(255, 255, 255, 255))
 	s.stroke.setPaintColor(RGBA(0, 0, 0, 255))
 	s.strokeWidth = 1.0
@@ -98,41 +92,41 @@ func (s *State) reset() {
 	s.fontId = 0
 }
 
-type PathCache struct {
-	points   []Point
-	paths    []Path
-	vertexes []Vertex
+type nvgPathCache struct {
+	points   []nvgPoint
+	paths    []nvgPath
+	vertexes []nvgVertex
 	bounds   [4]float32
 }
 
-func (c *PathCache) allocVertexes(n int) {
-	c.vertexes = append(c.vertexes, make([]Vertex, n)...)
+func (c *nvgPathCache) allocVertexes(n int) {
+	c.vertexes = append(c.vertexes, make([]nvgVertex, n)...)
 }
 
-func (c *PathCache) clearPathCache() {
+func (c *nvgPathCache) clearPathCache() {
 	c.points = c.points[:0]
 	c.paths = c.paths[:0]
 }
 
-func (c *PathCache) lastPath() *Path {
+func (c *nvgPathCache) lastPath() *nvgPath {
 	if len(c.paths) > 0 {
 		return &c.paths[len(c.paths)-1]
 	}
 	return nil
 }
 
-func (c *PathCache) addPath() {
-	c.paths = append(c.paths, Path{first: len(c.points), winding: CCW})
+func (c *nvgPathCache) addPath() {
+	c.paths = append(c.paths, nvgPath{first: len(c.points), winding: CCW})
 }
 
-func (c *PathCache) lastPoint() *Point {
+func (c *nvgPathCache) lastPoint() *nvgPoint {
 	if len(c.points) > 0 {
 		return &c.points[len(c.points)-1]
 	}
 	return nil
 }
 
-func (c *PathCache) addPoint(x, y float32, flags nvgPointFlags, distTol float32) {
+func (c *nvgPathCache) addPoint(x, y float32, flags nvgPointFlags, distTol float32) {
 	path := c.lastPath()
 
 	if path.count > 0 && len(c.points) > 0 {
@@ -143,7 +137,7 @@ func (c *PathCache) addPoint(x, y float32, flags nvgPointFlags, distTol float32)
 		}
 	}
 
-	c.points = append(c.points, Point{
+	c.points = append(c.points, nvgPoint{
 		x:     x,
 		y:     y,
 		dx:    0,
@@ -156,21 +150,21 @@ func (c *PathCache) addPoint(x, y float32, flags nvgPointFlags, distTol float32)
 	path.count++
 }
 
-func (c *PathCache) closePath() {
+func (c *nvgPathCache) closePath() {
 	path := c.lastPath()
 	if path != nil {
 		path.closed = true
 	}
 }
 
-func (c *PathCache) pathWinding(winding Winding) {
+func (c *nvgPathCache) pathWinding(winding Winding) {
 	path := c.lastPath()
 	if path != nil {
 		path.winding = winding
 	}
 }
 
-func (c *PathCache) tesselateBezier(x1, y1, x2, y2, x3, y3, x4, y4 float32, level int, flags nvgPointFlags, tessTol, distTol float32) {
+func (c *nvgPathCache) tesselateBezier(x1, y1, x2, y2, x3, y3, x4, y4 float32, level int, flags nvgPointFlags, tessTol, distTol float32) {
 	if level > 10 {
 		return
 	}
@@ -200,7 +194,7 @@ func (c *PathCache) tesselateBezier(x1, y1, x2, y2, x3, y3, x4, y4 float32, leve
 	c.tesselateBezier(x1234, y1234, x234, y234, x34, y34, x4, y4, level+1, flags, tessTol, distTol)
 }
 
-func (c *PathCache) calculateJoins(w float32, lineJoin LineCap, miterLimit float32) {
+func (c *nvgPathCache) calculateJoins(w float32, lineJoin LineCap, miterLimit float32) {
 	var iw float32 = 0.0
 	if w > 0.0 {
 		iw = 1.0 / w
@@ -264,13 +258,15 @@ func (c *PathCache) calculateJoins(w float32, lineJoin LineCap, miterLimit float
 
 			p1Index++
 			p0 = p1
-			p1 = &points[p1Index]
+			if len(points) != p1Index {
+				p1 = &points[p1Index]
+			}
 		}
 		path.convex = (nLeft == path.count)
 	}
 }
 
-func (c *PathCache) expandStroke(w float32, lineCap, lineJoin LineCap, miterLimit, fringeWidth, tessTol float32) {
+func (c *nvgPathCache) expandStroke(w float32, lineCap, lineJoin LineCap, miterLimit, fringeWidth, tessTol float32) {
 	aa := fringeWidth
 	// Calculate divisions per half circle.
 	nCap := curveDivs(w, PI, tessTol)
@@ -308,7 +304,7 @@ func (c *PathCache) expandStroke(w float32, lineCap, lineJoin LineCap, miterLimi
 		// Calculate fringe or stroke
 		loop := !path.closed
 		index := 0
-		var p0, p1 *Point
+		var p0, p1 *nvgPoint
 		var s, e, p1Index int
 
 		if loop {
@@ -353,7 +349,9 @@ func (c *PathCache) expandStroke(w float32, lineCap, lineJoin LineCap, miterLimi
 			}
 			p1Index++
 			p0 = p1
-			p1 = &points[p1Index]
+			if len(points) != p1Index {
+				p1 = &points[p1Index]
+			}
 		}
 
 		if loop {
@@ -379,7 +377,7 @@ func (c *PathCache) expandStroke(w float32, lineCap, lineJoin LineCap, miterLimi
 	}
 }
 
-func (c *PathCache) expandFill(w float32, lineJoin LineCap, miterLimit, fringeWidth float32) {
+func (c *nvgPathCache) expandFill(w float32, lineJoin LineCap, miterLimit, fringeWidth float32) {
 	aa := fringeWidth
 	fringe := w > 0.0
 
@@ -440,7 +438,9 @@ func (c *PathCache) expandFill(w float32, lineJoin LineCap, miterLimit, fringeWi
 
 				p1Index++
 				p0 = p1
-				p1 = &points[p1Index]
+				if len(points) != p1Index {
+					p1 = &points[p1Index]
+				}
 			}
 		} else {
 			for j := 0; j < path.count; j++ {
@@ -481,7 +481,9 @@ func (c *PathCache) expandFill(w float32, lineJoin LineCap, miterLimit, fringeWi
 				}
 				p1Index++
 				p0 = p1
-				p1 = &points[p1Index]
+				if len(points) != p1Index {
+					p1 = &points[p1Index]
+				}
 			}
 			// Loop it
 			(&dst[index]).set(dst[0].x, dst[0].y, lu, 1)

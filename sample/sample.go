@@ -20,7 +20,7 @@ func key(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods gl
 	} else if key == glfw.KeyS && action == glfw.Press {
 		screenshot = true
 	} else if key == glfw.KeyP && action == glfw.Press {
-		premult = true
+		premult = !premult
 	}
 }
 
@@ -49,7 +49,9 @@ func main() {
 	window.SetKeyCallback(key)
 	window.MakeContextCurrent()
 
-	ctx, err := nanovgo.NewContext(nanovgo.ANTIALIAS | nanovgo.STENCIL_STROKES | nanovgo.DEBUG)
+	ctx, err := nanovgo.NewContext( /*nanovgo.ANTIALIAS | */ nanovgo.STENCIL_STROKES | nanovgo.DEBUG)
+	defer ctx.Delete()
+
 	if err != nil {
 		panic(err)
 	}
@@ -63,7 +65,11 @@ func main() {
 
 		pixelRatio := float32(fbWidth) / float32(winWidth)
 		gl.Viewport(0, 0, fbWidth, fbHeight)
-		gl.ClearColor(0, 0, 0, 0)
+		if premult {
+			gl.ClearColor(0, 0, 0, 0)
+		} else {
+			gl.ClearColor(0.3, 0.3, 0.32, 1.0)
+		}
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT)
 		gl.Enable(gl.BLEND)
 		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
@@ -81,5 +87,4 @@ func main() {
 		glfw.PollEvents()
 	}
 
-	ctx.Delete()
 }

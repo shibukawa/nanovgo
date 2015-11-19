@@ -67,7 +67,7 @@ func drawLines(ctx *nanovgo.Context, x, y, w, h float32) {
 
 func drawWidths(ctx *nanovgo.Context, x, y, width float32) {
 	ctx.Save()
-	ctx.SetStrokeColor(nanovgo.RGBA(0, 0, 0, 255))
+	ctx.SetStrokeColor(nanovgo.RGBA(255, 127, 255, 255))
 	for i := 0; i < 20; i++ {
 		w := (float32(i) + 0.5) * 0.1
 		ctx.SetStrokeWidth(w)
@@ -87,12 +87,12 @@ func drawCaps(ctx *nanovgo.Context, x, y, width float32) {
 	ctx.Save()
 	ctx.BeginPath()
 	ctx.Rect(x-lineWidth/2, y, width+lineWidth, 40)
-	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 32))
+	ctx.SetFillColor(nanovgo.RGBA(255, 200, 255, 32))
 	ctx.Fill()
 
 	ctx.BeginPath()
 	ctx.Rect(x, y, width, 40)
-	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 32))
+	ctx.SetFillColor(nanovgo.RGBA(255, 200, 255, 32))
 	ctx.Fill()
 
 	ctx.SetStrokeWidth(lineWidth)
