@@ -48,7 +48,7 @@ type GlyphKey struct {
 
 type Glyph struct {
 	codePoint        rune
-	index            int
+	Index            int
 	size, blur       int16
 	x0, y0, x1, y1   int16
 	xAdv, xOff, yOff int16
@@ -186,6 +186,10 @@ func (stash *FontStash) SetFont(font int) {
 	stash.state.font = font
 }
 
+func (stash *FontStash) GetFontName() string {
+	return stash.fonts[stash.state.font].name
+}
+
 func (stash *FontStash) VerticalMetrics() (float32, float32, float32) {
 	state := stash.state
 	if len(stash.fonts) < state.font+1 {
@@ -254,6 +258,10 @@ func (stash *FontStash) ResetAtlas(width, height int) {
 }
 
 func (stash *FontStash) TextBounds(x, y float32, str string) (float32, []float32) {
+	return stash.TextBoundsOfRunes(x, y, []rune(str))
+}
+
+func (stash *FontStash) TextBoundsOfRunes(x, y float32, runes []rune) (float32, []float32) {
 	state := stash.state
 	prevGlyphIndex := -1
 	size := int(state.size * 10.0)
@@ -273,7 +281,7 @@ func (stash *FontStash) TextBounds(x, y float32, str string) (float32, []float32
 	maxY := y
 	startX := x
 
-	for _, codePoint := range []rune(str) {
+	for _, codePoint := range runes {
 		glyph := stash.getGlyph(font, codePoint, size, blur)
 		if glyph != nil {
 			var quad *Quad
@@ -290,7 +298,7 @@ func (stash *FontStash) TextBounds(x, y float32, str string) (float32, []float32
 			if quad.Y1 > maxY {
 				maxY = quad.Y1
 			}
-			prevGlyphIndex = glyph.index
+			prevGlyphIndex = glyph.Index
 		} else {
 			prevGlyphIndex = -1
 		}
@@ -312,6 +320,10 @@ func (stash *FontStash) TextBounds(x, y float32, str string) (float32, []float32
 }
 
 func (stash *FontStash) TextIter(x, y float32, str string) *TextIterator {
+	return stash.TextIterForRunes(x, y, []rune(str))
+}
+
+func (stash *FontStash) TextIterForRunes(x, y float32, runes []rune) *TextIterator {
 	state := stash.state
 	if len(stash.fonts) < state.font+1 {
 		return nil
@@ -320,13 +332,12 @@ func (stash *FontStash) TextIter(x, y float32, str string) *TextIterator {
 	if (state.align & ALIGN_LEFT) != 0 {
 		// do nothing
 	} else if (state.align & ALIGN_RIGHT) != 0 {
-		width, _ := stash.TextBounds(x, y, str)
+		width, _ := stash.TextBoundsOfRunes(x, y, runes)
 		x -= width
 	} else if (state.align & ALIGN_CENTER) != 0 {
-		width, _ := stash.TextBounds(x, y, str)
+		width, _ := stash.TextBoundsOfRunes(x, y, runes)
 		x -= width * 0.5
 	}
-	runes := []rune(str)
 	iter := &TextIterator{
 		stash:        stash,
 		font:         font,
@@ -364,7 +375,7 @@ func (iter *TextIterator) Next() (quad *Quad) {
 	glyph := stash.getGlyph(font, iter.CodePoint, iter.Size, iter.Blur)
 	prevGlyphIndex := -1
 	if iter.PrevGlyph != nil {
-		prevGlyphIndex = iter.PrevGlyph.index
+		prevGlyphIndex = iter.PrevGlyph.Index
 	}
 	if glyph != nil {
 		quad, iter.NextX, iter.NextY = iter.stash.getQuad(font, prevGlyphIndex, glyph, iter.Scale, iter.Spacing, iter.NextX, iter.NextY)
@@ -448,7 +459,7 @@ func (stash *FontStash) getGlyph(font *Font, codePoint rune, size, blur int) *Gl
 	width := stash.params.width
 	glyph = &Glyph{
 		codePoint: codePoint,
-		index:     index,
+		Index:     index,
 		size:      int16(size),
 		blur:      int16(blur),
 		x0:        int16(gx),
@@ -488,7 +499,7 @@ func (stash *FontStash) getQuad(font *Font, prevGlyphIndex int, glyph *Glyph, sc
 	x = originalX
 	y = originalY
 	if prevGlyphIndex != -1 {
-		adv := float32(font.getGlyphKernAdvance(prevGlyphIndex, glyph.index)) * scale
+		adv := float32(font.getGlyphKernAdvance(prevGlyphIndex, glyph.Index)) * scale
 		x += float32(int(adv + spacing + 0.5))
 	}
 	xOff := float32(int(glyph.xOff + 1))

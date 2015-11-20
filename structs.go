@@ -1,5 +1,9 @@
 package nanovgo
 
+import (
+	"github.com/shibukawa/nanovgo/fontstashmini"
+)
+
 type nvgParams interface {
 	edgeAntiAlias() bool
 	renderCreate() error
@@ -89,7 +93,11 @@ func (s *nvgState) reset() {
 	s.lineHeight = 1.0
 	s.fontBlur = 0.0
 	s.textAlign = ALIGN_LEFT | ALIGN_BASELINE
-	s.fontId = 0
+	s.fontId = fontstashmini.FONS_INVALID
+}
+
+func (s *nvgState) getFontScale() float32 {
+	return minF(quantize(s.xform.getAverageScale(), 0.01), 4.0)
 }
 
 type nvgPathCache struct {
@@ -494,4 +502,20 @@ func (c *nvgPathCache) expandFill(w float32, lineJoin LineCap, miterLimit, fring
 			path.strokes = path.strokes[:0]
 		}
 	}
+}
+
+type GlyphPosition struct {
+	Index      int // Position of the glyph in the input string.
+	Runes      []rune
+	X          float32 // The x-coordinate of the logical glyph position.
+	MinX, MaxX float32 // The bounds of the glyph shape.
+}
+
+type TextRow struct {
+	Runes      []rune  // The input string.
+	StartIndex int     // Index to the input text where the row starts.
+	EndIndex   int     // Index to the input text where the row ends (one past the last character).
+	NextIndex  int     // Index to the beginning of the next row.
+	Width      float32 // Logical width of the row.
+	MinX, MaxX float32 // Actual bounds of the row. Logical with and bounds can differ because of kerning and some parts over extending.
 }

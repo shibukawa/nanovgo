@@ -185,12 +185,6 @@ func polyReverse(points []nvgPoint) {
 	}
 }
 
-func getAverageScale(t TransformMatrix) float32 {
-	sx := math.Sqrt(float64(t[0]*t[0] + t[2]*t[2]))
-	sy := math.Sqrt(float64(t[1]*t[1] + t[3]*t[3]))
-	return float32((sx + sy) * 0.5)
-}
-
 func curveDivs(r, arc, tol float32) int {
 	da := math.Acos(float64(r/(r+tol))) * 2.0
 	return maxI(2, int(math.Ceil(float64(arc)/da)))
@@ -424,4 +418,8 @@ func nearestPow2(num int) int {
 	n |= n >> 16
 	n++
 	return int(num)
+}
+
+func quantize(a, d float32) float32 {
+	return float32(int(a/d+0.5)) * d
 }

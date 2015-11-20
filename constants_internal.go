@@ -44,3 +44,11 @@ const (
 	nvg_SOLID nvgSolidity = 1
 	nvg_HOLE  nvgSolidity = 2
 )
+
+type nvgCodePointSize int
+
+const (
+	nvg_NEWLINE nvgCodePointSize = iota
+	nvg_SPACE
+	nvg_CHAR
+)

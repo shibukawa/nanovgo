@@ -6,6 +6,7 @@ import (
 	"github.com/goxjs/gl"
 	"github.com/goxjs/glfw"
 	"github.com/shibukawa/nanovgo"
+	"github.com/shibukawa/nanovgo/perfgraph"
 )
 
 var blowup bool
@@ -37,8 +38,6 @@ func main() {
 	}
 	defer glfw.Terminate()
 
-	// todo: initGraph(&fps, GRAPH_RENDER_FPS, "Frame Time");
-
 	// demo MSAA
 	glfw.WindowHint(glfw.Samples, 4)
 
@@ -58,7 +57,11 @@ func main() {
 
 	glfw.SwapInterval(0)
 
+	fps := perfgraph.NewPerfGraph(perfgraph.RENDER_FPS, "Frame Time", "sans")
+
 	for !window.ShouldClose() {
+		/*t, dt :=*/ fps.UpdateGraph()
+
 		fbWidth, fbHeight := window.GetFramebufferSize()
 		winWidth, winHeight := window.GetSize()
 		mx, my := window.GetCursorPos()
@@ -79,6 +82,7 @@ func main() {
 		ctx.BeginFrame(winWidth, winHeight, pixelRatio)
 
 		renderDemo(ctx, float32(mx), float32(my), float32(winWidth), float32(winHeight))
+		fps.RenderGraph(ctx, 5, 5)
 
 		ctx.EndFrame()
 
