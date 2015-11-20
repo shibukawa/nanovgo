@@ -64,7 +64,7 @@ func drawEyes(ctx *nanovgo.Context, x, y, w, h, mx, my, t float32) {
 	} else {
 		br = ey * 0.5
 	}
-	blink := float32(1.0 - math.Pow(float64(sqrtF(t*0.5)), 200)*0.8)
+	blink := float32(1.0 - math.Pow(float64(sinF(t*0.5)), 200)*0.8)
 
 	bg1 := nanovgo.LinearGradient(x, y+h*0.5, x+w*0.1, y+h, nanovgo.RGBA(0, 0, 0, 32), nanovgo.RGBA(0, 0, 0, 16))
 	ctx.BeginPath()
@@ -208,6 +208,108 @@ func drawGraph(ctx *nanovgo.Context, x, y, w, h, t float32) {
 	ctx.SetStrokeWidth(1.0)
 }
 
+func drawColorWheel(ctx *nanovgo.Context, x, y, w, h, t float32) {
+	var r0, r1, ax, ay, bx, by, aeps, r float32
+	hue := sinF(t * 0.12)
+
+	ctx.Save()
+	/*      ctx.BeginPath()
+	ctx.Rect(x,y,w,h)
+	ctx.FillColor(nanovgo.RGBA(255,0,0,128))
+	ctx.Fill()*/
+
+	cx := x + w*0.5
+	cy := y + h*0.5
+	if w < h {
+		r1 = w*0.5 - 5.0
+	} else {
+		r1 = h*0.5 - 5.0
+	}
+	r0 = r1 - 20.0
+	aeps = 0.5 / r1 // half a pixel arc length in radians (2pi cancels out).
+
+	for i := 0; i < 6; i++ {
+		a0 := float32(i)/6.0*nanovgo.PI*2.0 - aeps
+		a1 := float32(i+1.0)/6.0*nanovgo.PI*2.0 + aeps
+		ctx.BeginPath()
+		ctx.Arc(cx, cy, r0, a0, a1, nanovgo.CW)
+		ctx.Arc(cx, cy, r1, a1, a0, nanovgo.CCW)
+		ctx.ClosePath()
+		ax = cx + cosF(a0)*(r0+r1)*0.5
+		ay = cy + sinF(a0)*(r0+r1)*0.5
+		bx = cx + cosF(a1)*(r0+r1)*0.5
+		by = cy + sinF(a1)*(r0+r1)*0.5
+		paint := nanovgo.LinearGradient(ax, ay, bx, by, nanovgo.HSLA(a0/(nanovgo.PI*2), 1.0, 0.55, 255), nanovgo.HSLA(a1/(nanovgo.PI*2), 1.0, 0.55, 255))
+		ctx.SetFillPaint(paint)
+		ctx.Fill()
+	}
+
+	ctx.BeginPath()
+	ctx.Circle(cx, cy, r0-0.5)
+	ctx.Circle(cx, cy, r1+0.5)
+	ctx.SetStrokeColor(nanovgo.RGBA(0, 0, 0, 64))
+	ctx.SetStrokeWidth(1.0)
+	ctx.Stroke()
+
+	// Selector
+	ctx.Translate(cx, cy)
+	ctx.Rotate(hue * nanovgo.PI * 2)
+
+	// Marker on
+	ctx.SetStrokeWidth(2.0)
+	ctx.BeginPath()
+	ctx.Rect(r0-1, -3, r1-r0+2, 6)
+	ctx.SetStrokeColor(nanovgo.RGBA(255, 255, 255, 192))
+	ctx.Stroke()
+
+	paint := nanovgo.BoxGradient(r0-3, -5, r1-r0+6, 10, 2, 4, nanovgo.RGBA(0, 0, 0, 128), nanovgo.RGBA(0, 0, 0, 0))
+	ctx.BeginPath()
+	ctx.Rect(r0-2-10, -4-10, r1-r0+4+20, 8+20)
+	ctx.Rect(r0-2, -4, r1-r0+4, 8)
+	ctx.PathWinding(nanovgo.HOLE)
+	ctx.SetFillPaint(paint)
+	ctx.Fill()
+
+	// Center triangle
+	r = r0 - 6
+	ax = cosF(120.0/180.0*nanovgo.PI) * r
+	ay = sinF(120.0/180.0*nanovgo.PI) * r
+	bx = cosF(-120.0/180.0*nanovgo.PI) * r
+	by = sinF(-120.0/180.0*nanovgo.PI) * r
+	ctx.BeginPath()
+	ctx.MoveTo(r, 0)
+	ctx.LineTo(ax, ay)
+	ctx.LineTo(bx, by)
+	ctx.ClosePath()
+	paint = nanovgo.LinearGradient(r, 0, ax, ay, nanovgo.HSLA(hue, 1.0, 0.5, 255), nanovgo.RGBA(255, 255, 255, 255))
+	ctx.SetFillPaint(paint)
+	ctx.Fill()
+	paint = nanovgo.LinearGradient((r+ax)*0.5, (0+ay)*0.5, bx, by, nanovgo.RGBA(0, 0, 0, 0), nanovgo.RGBA(0, 0, 0, 255))
+	ctx.SetFillPaint(paint)
+	ctx.Fill()
+	ctx.SetStrokeColor(nanovgo.RGBA(0, 0, 0, 64))
+	ctx.Stroke()
+
+	// Select circle on triangle
+	ax = cosF(120.0/180.0*nanovgo.PI) * r * 0.3
+	ay = sinF(120.0/180.0*nanovgo.PI) * r * 0.4
+	ctx.SetStrokeWidth(2.0)
+	ctx.BeginPath()
+	ctx.Circle(ax, ay, 5)
+	ctx.SetStrokeColor(nanovgo.RGBA(255, 255, 255, 192))
+	ctx.Stroke()
+
+	paint = nanovgo.RadialGradient(ax, ay, 7, 9, nanovgo.RGBA(0, 0, 0, 64), nanovgo.RGBA(0, 0, 0, 0))
+	ctx.BeginPath()
+	ctx.Rect(ax-20, ay-20, 40, 40)
+	ctx.Circle(ax, ay, 7)
+	ctx.PathWinding(nanovgo.HOLE)
+	ctx.SetFillPaint(paint)
+	ctx.Fill()
+
+	ctx.Restore()
+}
+
 func drawLines(ctx *nanovgo.Context, x, y, w, h, t float32) {
 	var pad float32 = 5.0
 	s := w/9.0 - pad*2
@@ -277,7 +379,7 @@ func drawWidths(ctx *nanovgo.Context, x, y, width float32) {
 
 func drawCaps(ctx *nanovgo.Context, x, y, width float32) {
 	caps := []nanovgo.LineCap{nanovgo.BUTT, nanovgo.ROUND, nanovgo.SQUARE}
-	var lineWidth float32 = 0.8
+	var lineWidth float32 = 8.0
 
 	ctx.Save()
 	ctx.BeginPath()

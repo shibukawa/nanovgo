@@ -38,13 +38,6 @@ const (
 	nvg_TEXTURE_RGBA  nvgTextureType = 2
 )
 
-type nvgSolidity int
-
-const (
-	nvg_SOLID nvgSolidity = 1
-	nvg_HOLE  nvgSolidity = 2
-)
-
 type nvgCodePointSize int
 
 const (

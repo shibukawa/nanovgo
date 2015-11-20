@@ -34,7 +34,7 @@ func TransformMatrixRotate(a float32) TransformMatrix {
 	sin, cos := math.Sincos(float64(a))
 	sinF := float32(sin)
 	cosF := float32(cos)
-	return TransformMatrix{cosF, sinF, -sinF, -cosF, 0.0, 0.0}
+	return TransformMatrix{cosF, sinF, -sinF, cosF, 0.0, 0.0}
 }
 
 // Makes the transform to skew-x matrix. Angle is specified in radians.

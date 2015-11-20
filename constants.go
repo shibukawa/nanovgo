@@ -13,11 +13,11 @@ const (
 	PI      float32 = 3.14159265358979323846264338327
 )
 
-type Winding int
+type Direction int
 
 const (
-	CCW Winding = 1
-	CW  Winding = 2
+	CCW Direction = 1
+	CW  Direction = 2
 )
 
 type LineCap int
@@ -52,4 +52,13 @@ const (
 	IMAGE_REPEATY          ImageFlags = 1 << 2 // Repeat image in X direction.
 	IMAGE_FLIPY            ImageFlags = 1 << 3 // Flips (inverses) image in Y direction when rendered.
 	IMAGE_PREMULTIPLIED    ImageFlags = 1 << 4 // Image data has premultiplied alpha.
+)
+
+type Winding int
+
+const (
+	SOLID    Winding = 1
+	NON_ZERO Winding = 1
+	HOLE     Winding = 2
+	EVEN_ODD Winding = 2
 )

@@ -7,7 +7,6 @@ import (
 	"github.com/goxjs/glfw"
 	"github.com/shibukawa/nanovgo"
 	"github.com/shibukawa/nanovgo/perfgraph"
-	"log"
 	//"time"
 )
 
@@ -31,6 +30,7 @@ func renderDemo(ctx *nanovgo.Context, mx, my, width, height, t float32, data *De
 	drawEyes(ctx, width-250, 50, 150, 100, mx, my, t)
 
 	drawGraph(ctx, 0, height/2, width, height/2, t)
+	drawColorWheel(ctx, width-300, height-300, 250.0, 250.0, t)
 
 	drawLines(ctx, 120, height-50, 600, 50, t)
 	drawWidths(ctx, 10, 50, 30)
@@ -69,10 +69,9 @@ func main() {
 	fps := perfgraph.NewPerfGraph(perfgraph.RENDER_FPS, "Frame Time", "sans")
 
 	for !window.ShouldClose() {
-		t, dt := fps.UpdateGraph()
+		t, _ := fps.UpdateGraph()
 
 		//time.Sleep(time.Second*time.Duration(0.016666 - dt))
-		log.Println(t, 1.0/dt)
 
 		fbWidth, fbHeight := window.GetFramebufferSize()
 		winWidth, winHeight := window.GetSize()

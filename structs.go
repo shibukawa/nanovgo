@@ -46,7 +46,7 @@ type nvgPath struct {
 	nBevel  int
 	fills   []nvgVertex
 	strokes []nvgVertex
-	winding Winding
+	winding Direction
 	convex  bool
 }
 
@@ -167,7 +167,7 @@ func (c *nvgPathCache) closePath() {
 	}
 }
 
-func (c *nvgPathCache) pathWinding(winding Winding) {
+func (c *nvgPathCache) pathWinding(winding Direction) {
 	path := c.lastPath()
 	if path != nil {
 		path.winding = winding

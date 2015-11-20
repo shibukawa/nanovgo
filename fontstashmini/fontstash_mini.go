@@ -489,8 +489,8 @@ func (stash *FontStash) getGlyph(font *Font, codePoint rune, size, blur int) *Gl
 
 	stash.dirtyRect[0] = fons__mini(stash.dirtyRect[0], gx)
 	stash.dirtyRect[1] = fons__mini(stash.dirtyRect[1], gy)
-	stash.dirtyRect[2] = fons__mini(stash.dirtyRect[2], gr)
-	stash.dirtyRect[3] = fons__mini(stash.dirtyRect[3], gb)
+	stash.dirtyRect[2] = fons__maxi(stash.dirtyRect[2], gr)
+	stash.dirtyRect[3] = fons__maxi(stash.dirtyRect[3], gb)
 
 	return glyph
 }

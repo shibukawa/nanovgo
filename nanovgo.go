@@ -504,7 +504,7 @@ func (c *Context) QuadTo(cx, cy, x, y float32) {
 // Creates new circle arc shaped sub-path. The arc center is at cx,cy, the arc radius is r,
 // and the arc is drawn from angle a0 to a1, and swept in direction dir (nanovgo.CCW, or nanovgo.CW).
 // Angles are specified in radians.
-func (c *Context) Arc(cx, cy, r, a0, a1 float32, dir Winding) {
+func (c *Context) Arc(cx, cy, r, a0, a1 float32, dir Direction) {
 	var move nvgCommands
 	if len(c.commands) > 0 {
 		move = nvg_LINETO
@@ -595,7 +595,7 @@ func (c *Context) ArcTo(x1, y1, x2, y2, radius float32) {
 		return
 	}
 	var cx, cy, a0, a1 float32
-	var dir Winding
+	var dir Direction
 	if cross(dx0, dy0, dx1, dy1) > 0.0 {
 		cx = x1 + dx0*d + dy0*radius
 		cy = y1 + dy0*d + -dx0*radius
@@ -667,7 +667,7 @@ func (c *Context) ClosePath() {
 	c.appendCommand([]float32{float32(nvg_CLOSE)})
 }
 
-// Sets the current sub-path winding, see nanovgo.Winding and nanovgo.Solidity.
+// Sets the current sub-path winding, see nanovgo.Winding.
 func (c *Context) PathWinding(dir Winding) {
 	c.appendCommand([]float32{float32(nvg_WINDING), float32(dir)})
 }
@@ -856,10 +856,12 @@ func (c *Context) Text(x, y float32, str string) float32 {
 	c.fs.SetAlign(fontstashmini.FONSAlign(state.textAlign))
 	c.fs.SetFont(state.fontId)
 
-	vertexCount := maxI(2, len(str)) * 6 // conservative estimate.
+	runes := []rune(str)
+
+	vertexCount := maxI(2, len(runes)) * 6 // conservative estimate.
 	vertexes := c.cache.allocVertexes(vertexCount)
 
-	iter := c.fs.TextIter(x*scale, y*scale, str)
+	iter := c.fs.TextIterForRunes(x*scale, y*scale, runes)
 	prevIter := iter
 	index := 0
 
@@ -890,6 +892,7 @@ func (c *Context) Text(x, y float32, str string) float32 {
 		c[2], c[3] = state.xform.Point(quad.X1*invScale, quad.Y0*invScale)
 		c[4], c[5] = state.xform.Point(quad.X1*invScale, quad.Y1*invScale)
 		c[6], c[7] = state.xform.Point(quad.X0*invScale, quad.Y1*invScale)
+		// Create triangles
 		if index+6 <= vertexCount {
 			(&vertexes[index]).set(c[0], c[1], quad.S0, quad.T0)
 			(&vertexes[index+1]).set(c[4], c[5], quad.S1, quad.T1)
@@ -1368,7 +1371,7 @@ func (c *Context) flattenPaths() {
 			cache.closePath()
 			i++
 		case nvg_WINDING:
-			cache.pathWinding(Winding(c.commands[i+1]))
+			cache.pathWinding(Direction(c.commands[i+1]))
 			i += 2
 		default:
 			i++
@@ -1384,14 +1387,14 @@ func (c *Context) flattenPaths() {
 		p0 := &points[path.count-1]
 		p1Index := 0
 		p1 := &points[p1Index]
-		if ptEquals(p0.x, p0.y, p1.x, p1.y, c.distTol) {
+		if ptEquals(p0.x, p0.y, p1.x, p1.y, c.distTol) && path.count > 2 {
 			path.count--
 			p0 = &points[path.count-1]
 			path.closed = true
 		}
 
 		// Enforce winding.
-		if path.count > 0 {
+		if path.count > 2 {
 			area := polyArea(points)
 			if path.winding == CCW && area < 0.0 {
 				polyReverse(points)
