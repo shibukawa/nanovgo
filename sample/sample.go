@@ -29,6 +29,9 @@ func key(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods gl
 
 func renderDemo(ctx *nanovgo.Context, mx, my, width, height, t float32, data *DemoData) {
 	drawEyes(ctx, width-250, 50, 150, 100, mx, my, t)
+
+	drawGraph(ctx, 0, height/2, width, height/2, t)
+
 	drawLines(ctx, 120, height-50, 600, 50, t)
 	drawWidths(ctx, 10, 50, 30)
 	drawCaps(ctx, 10, 300, 30)

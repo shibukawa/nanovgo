@@ -1389,7 +1389,7 @@ func (c *Context) flattenPaths() {
 			p0 = &points[path.count-1]
 			path.closed = true
 		}
-		points = points[:path.count]
+
 		// Enforce winding.
 		if path.count > 0 {
 			area := polyArea(points)

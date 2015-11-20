@@ -27,7 +27,6 @@ func (c Color) PreMultiply() Color {
 	c.R *= c.A
 	c.G *= c.A
 	c.B *= c.A
-	c.A = 1.0
 	return c
 }
 
