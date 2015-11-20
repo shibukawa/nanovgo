@@ -374,7 +374,7 @@ func roundCapStart(dst []nvgVertex, index int, p *nvgPoint, dx, dy, w float32, n
 		s, c := sinCosF(a)
 		ax := c * w
 		ay := s * w
-		(&dst[index]).set(px-dlx*ax-dx*ay, py-dlx*ax-dy*ay, 0, 1)
+		(&dst[index]).set(px-dlx*ax-dx*ay, py-dly*ax-dy*ay, 0, 1)
 		(&dst[index+1]).set(px, py, 0.5, 1)
 		index += 2
 	}
@@ -397,7 +397,7 @@ func roundCapEnd(dst []nvgVertex, index int, p *nvgPoint, dx, dy, w float32, nCa
 		ax := c * w
 		ay := s * w
 		(&dst[index]).set(px, py, 0.5, 1)
-		(&dst[index+1]).set(px-dlx*ax+dx*ay, py-dlx*ax+dy*ay, 0, 1)
+		(&dst[index+1]).set(px-dlx*ax+dx*ay, py-dly*ax+dy*ay, 0, 1)
 		index += 2
 	}
 	return index
