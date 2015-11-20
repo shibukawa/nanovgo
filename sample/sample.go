@@ -7,6 +7,8 @@ import (
 	"github.com/goxjs/glfw"
 	"github.com/shibukawa/nanovgo"
 	"github.com/shibukawa/nanovgo/perfgraph"
+	"log"
+	//"time"
 )
 
 var blowup bool
@@ -25,8 +27,9 @@ func key(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods gl
 	}
 }
 
-func renderDemo(ctx *nanovgo.Context, mx, my, width, height float32) {
-	drawLines(ctx, 120, height-50, 600, 50)
+func renderDemo(ctx *nanovgo.Context, mx, my, width, height, t float32, data *DemoData) {
+	drawEyes(ctx, width-250, 50, 150, 100, mx, my, t)
+	drawLines(ctx, 120, height-50, 600, 50, t)
 	drawWidths(ctx, 10, 50, 30)
 	drawCaps(ctx, 10, 300, 30)
 }
@@ -55,12 +58,18 @@ func main() {
 		panic(err)
 	}
 
+	demoData := &DemoData{}
+	demoData.loadData(ctx)
+
 	glfw.SwapInterval(0)
 
 	fps := perfgraph.NewPerfGraph(perfgraph.RENDER_FPS, "Frame Time", "sans")
 
 	for !window.ShouldClose() {
-		/*t, dt :=*/ fps.UpdateGraph()
+		t, dt := fps.UpdateGraph()
+
+		//time.Sleep(time.Second*time.Duration(0.016666 - dt))
+		log.Println(t, 1.0/dt)
 
 		fbWidth, fbHeight := window.GetFramebufferSize()
 		winWidth, winHeight := window.GetSize()
@@ -81,7 +90,7 @@ func main() {
 
 		ctx.BeginFrame(winWidth, winHeight, pixelRatio)
 
-		renderDemo(ctx, float32(mx), float32(my), float32(winWidth), float32(winHeight))
+		renderDemo(ctx, float32(mx), float32(my), float32(winWidth), float32(winHeight), t, demoData)
 		fps.RenderGraph(ctx, 5, 5)
 
 		ctx.EndFrame()
@@ -91,4 +100,5 @@ func main() {
 		glfw.PollEvents()
 	}
 
+	demoData.freeData(ctx)
 }

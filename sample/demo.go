@@ -1,9 +1,46 @@
 package main
 
 import (
+	"fmt"
 	"github.com/shibukawa/nanovgo"
 	"math"
+
+	"log"
 )
+
+type DemoData struct {
+	fontNormal, fontBold, fontIcons int
+	images                          [12]int
+}
+
+func (d *DemoData) loadData(vg *nanovgo.Context) {
+	for i := 0; i < 12; i++ {
+		path := fmt.Sprintf("images/image%d.jpg", i+1)
+		d.images[i] = vg.CreateImage(path, 0)
+		if d.images[i] == 0 {
+			log.Fatalf("Could not load %s", path)
+		}
+	}
+
+	d.fontIcons = vg.CreateFont("icons", "entypo.ttf")
+	if d.fontIcons == -1 {
+		log.Fatalln("Could not add font icons.")
+	}
+	d.fontNormal = vg.CreateFont("sans", "Roboto-Regular.ttf")
+	if d.fontNormal == -1 {
+		log.Fatalln("Could not add font italic.")
+	}
+	d.fontBold = vg.CreateFont("sans-bold", "Roboto-Bold.ttf")
+	if d.fontBold == -1 {
+		log.Fatalln("Could not add font bold.")
+	}
+}
+
+func (d *DemoData) freeData(vg *nanovgo.Context) {
+	for _, img := range d.images {
+		vg.DeleteImage(img)
+	}
+}
 
 func cosF(a float32) float32 {
 	return float32(math.Cos(float64(a)))
@@ -12,8 +49,91 @@ func sinF(a float32) float32 {
 	return float32(math.Sin(float64(a)))
 }
 
-func drawLines(ctx *nanovgo.Context, x, y, w, h float32) {
-	var t float32 = 0.0
+func drawEyes(ctx *nanovgo.Context, x, y, w, h, mx, my, t float32) {
+	ex := w * 0.23
+	ey := h * 0.5
+	lx := x + ex
+	ly := y + ey
+	rx := x + w - ex
+	ry := y + ey
+	var dx, dy, d, br float32
+	if ex < ey {
+		br = ex * 0.5
+	} else {
+		br = ey * 0.5
+	}
+	blink := float32(1 - math.Pow(math.Sqrt(float64(t)*0.5), 200)*0.8)
+
+	bg1 := nanovgo.LinearGradient(x, y+h*0.5, x+w*0.1, y+h, nanovgo.RGBA(0, 0, 0, 32), nanovgo.RGBA(0, 0, 0, 16))
+	ctx.BeginPath()
+	ctx.Ellipse(lx+3.0, ly+16.0, ex, ey)
+	ctx.Ellipse(rx+3.0, ry+16.0, ex, ey)
+	ctx.SetFillPaint(bg1)
+	ctx.Fill()
+
+	bg2 := nanovgo.LinearGradient(x, y+h*0.25, x+w*0.1, y+h, nanovgo.RGBA(220, 220, 220, 255), nanovgo.RGBA(128, 128, 128, 255))
+	ctx.BeginPath()
+	ctx.Ellipse(lx, ly, ex, ey)
+	ctx.Ellipse(rx, ry, ex, ey)
+	ctx.SetFillPaint(bg2)
+	ctx.Fill()
+
+	dx = (mx - rx) / (ex * 10)
+	dy = (my - ry) / (ey * 10)
+	d = float32(math.Sqrt(float64(dx*dx + dy*dy)))
+	if d > 1.0 {
+		dx /= d
+		dy /= d
+	}
+	dx *= ex * 0.4
+	dy *= ey * 0.5
+	ctx.BeginPath()
+	ctx.Ellipse(lx+dx, ly+dy+ey*0.25*(1-blink), br, br*blink)
+	ctx.SetFillColor(nanovgo.RGBA(32, 32, 32, 255))
+	ctx.Fill()
+
+	dx = (mx - rx) / (ex * 10)
+	dy = (my - ry) / (ey * 10)
+	d = float32(math.Sqrt(float64(dx*dx + dy*dy)))
+	if d > 1.0 {
+		dx /= d
+		dy /= d
+	}
+	dx *= ex * 0.4
+	dy *= ey * 0.5
+	ctx.BeginPath()
+	ctx.Ellipse(rx+dx, ry+dy+ey*0.25*(1-blink), br, br*blink)
+	ctx.SetFillColor(nanovgo.RGBA(32, 32, 32, 255))
+	ctx.Fill()
+	dx = (mx - rx) / (ex * 10)
+	dy = (my - ry) / (ey * 10)
+	d = float32(math.Sqrt(float64(dx*dx + dy*dy)))
+	if d > 1.0 {
+		dx /= d
+		dy /= d
+	}
+	dx *= ex * 0.4
+	dy *= ey * 0.5
+	ctx.BeginPath()
+	ctx.Ellipse(rx+dx, ry+dy+ey*0.25*(1-blink), br, br*blink)
+	ctx.SetFillColor(nanovgo.RGBA(32, 32, 32, 255))
+	ctx.Fill()
+
+	gloss1 := nanovgo.RadialGradient(lx-ex*0.25, ly-ey*0.5, ex*0.1, ex*0.75, nanovgo.RGBA(255, 255, 255, 128), nanovgo.RGBA(255, 255, 255, 0))
+	ctx.BeginPath()
+	ctx.Ellipse(lx, ly, ex, ey)
+	ctx.SetFillPaint(gloss1)
+	ctx.Fill()
+
+	gloss2 := nanovgo.RadialGradient(rx-ex*0.25, ry-ey*0.5, ex*0.1, ex*0.75, nanovgo.RGBA(255, 255, 255, 128), nanovgo.RGBA(255, 255, 255, 0))
+	ctx.BeginPath()
+	ctx.Ellipse(rx, ry, ex, ey)
+	ctx.SetFillPaint(gloss2)
+	ctx.Fill()
+
+}
+
+func drawLines(ctx *nanovgo.Context, x, y, w, h, t float32) {
 	var pad float32 = 5.0
 	s := w/9.0 - pad*2
 	joins := []nanovgo.LineCap{nanovgo.MITER, nanovgo.ROUND, nanovgo.BEVEL}
@@ -87,12 +207,12 @@ func drawCaps(ctx *nanovgo.Context, x, y, width float32) {
 	ctx.Save()
 	ctx.BeginPath()
 	ctx.Rect(x-lineWidth/2, y, width+lineWidth, 40)
-	ctx.SetFillColor(nanovgo.RGBA(255, 200, 255, 32))
+	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 32))
 	ctx.Fill()
 
 	ctx.BeginPath()
 	ctx.Rect(x, y, width, 40)
-	ctx.SetFillColor(nanovgo.RGBA(255, 200, 255, 32))
+	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 32))
 	ctx.Fill()
 
 	ctx.SetStrokeWidth(lineWidth)

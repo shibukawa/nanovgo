@@ -48,8 +48,8 @@ func NewPerfGraph(style GraphRenderStyle, name, fontFace string) *PerfGraph {
 
 func (pg *PerfGraph) UpdateGraph() (timeFromStart, frameTime float32) {
 	timeNow := time.Now()
-	timeFromStart = float32(timeNow.Sub(pg.startTime) / time.Second)
-	frameTime = float32(timeNow.Sub(pg.lastUpdateTime) / time.Second)
+	timeFromStart = float32(timeNow.Sub(pg.startTime)/time.Millisecond) * 0.001
+	frameTime = float32(timeNow.Sub(pg.lastUpdateTime)/time.Millisecond) * 0.001
 	pg.lastUpdateTime = timeNow
 
 	pg.head = (pg.head + 1) % nvg_GRAPH_HISTORY_COUNT
