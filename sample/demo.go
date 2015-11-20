@@ -51,9 +51,6 @@ func sinF(a float32) float32 {
 func sqrtF(a float32) float32 {
 	return float32(math.Sqrt(float64(a)))
 }
-func powF(a, b float32) float32 {
-	return float32(math.Pow(float64(a), float64(b)))
-}
 func drawEyes(ctx *nanovgo.Context, x, y, w, h, mx, my, t float32) {
 	ex := w * 0.23
 	ey := h * 0.5
@@ -67,7 +64,7 @@ func drawEyes(ctx *nanovgo.Context, x, y, w, h, mx, my, t float32) {
 	} else {
 		br = ey * 0.5
 	}
-	blink := 1.0 - math.Pow(sqrtF(t*0.5), 200)*0.8
+	blink := float32(1.0 - math.Pow(float64(sqrtF(t*0.5)), 200)*0.8)
 
 	bg1 := nanovgo.LinearGradient(x, y+h*0.5, x+w*0.1, y+h, nanovgo.RGBA(0, 0, 0, 32), nanovgo.RGBA(0, 0, 0, 16))
 	ctx.BeginPath()
