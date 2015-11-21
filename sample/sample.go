@@ -36,13 +36,26 @@ func key(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods gl
 
 func renderDemo(ctx *nanovgo.Context, mx, my, width, height, t float32, data *DemoData) {
 	drawEyes(ctx, width-250, 50, 150, 100, mx, my, t)
-
+	//drawParagraph(ctx, width-450, 50, 150, 100, mx, my)
 	drawGraph(ctx, 0, height/2, width, height/2, t)
 	drawColorWheel(ctx, width-300, height-300, 250.0, 250.0, t)
 
+	// Line joints
 	drawLines(ctx, 120, height-50, 600, 50, t)
+
+	// Line widths
 	drawWidths(ctx, 10, 50, 30)
+
+	// Line caps
 	drawCaps(ctx, 10, 300, 30)
+
+	//drawScissor(ctx, 50, height-80, t)
+
+	ctx.Save()
+	if blowup {
+		ctx.Rotate(sinF(t*0.3) * 5.0 / 180.0 * nanovgo.PI)
+		ctx.Scale(2.0, 2.0)
+	}
 
 	// Widgets
 	drawWindow(ctx, "Widgets `n Stuff", 50, 50, 300, 400)
@@ -50,9 +63,37 @@ func renderDemo(ctx *nanovgo.Context, mx, my, width, height, t float32, data *De
 	var y float32 = 95.0
 	drawButton(ctx, ICON_LOGIN, "Sign in", x+138, y, 140, 28, nanovgo.RGBA(0, 96, 128, 255))
 	y += 45
+	drawSearchBox(ctx, "Search", x, y, 280, 25)
+	y += 40
+	drawDropDown(ctx, "Effects", x, y, 280, 28)
+	popy := y + 14
+	y += 45
+
+	// Form
+	drawLabel(ctx, "Login", x, y, 280, 20)
+	y += 25
+	drawEditBox(ctx, "Email", x, y, 280, 28)
+	y += 35
+	drawEditBox(ctx, "Password", x, y, 280, 28)
+	y += 38
+	drawCheckBox(ctx, "Remember me", x, y, 140, 28)
+	drawButton(ctx, ICON_LOGIN, "Sign in", x+138, y, 140, 28, nanovgo.RGBA(0, 96, 128, 255))
+	y += 45
+
+	// Slider
+	drawLabel(ctx, "Diameter", x, y, 280, 20)
+	y += 25
+	drawEditBoxNum(ctx, "123.00", "px", x+180, y, 100, 28)
+	drawSlider(ctx, 0.4, x, y, 170, 28)
+	y += 55
 
 	drawButton(ctx, ICON_TRASH, "Delete", x, y, 160, 28, nanovgo.RGBA(128, 16, 8, 255))
 	drawButton(ctx, 0, "Cancel", x+170, y, 110, 28, nanovgo.RGBA(0, 0, 0, 0))
+
+	// Thumbnails box
+	drawThumbnails(ctx, 365, popy-30, 160, 300, data.images, t)
+
+	ctx.Restore()
 }
 
 func main() {

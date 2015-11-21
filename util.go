@@ -19,6 +19,7 @@ func signF(a float32) float32 {
 		return -1.0
 	}
 }
+
 func clampF(a, min, max float32) float32 {
 	if a < min {
 		return min
