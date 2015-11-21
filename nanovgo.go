@@ -624,7 +624,7 @@ func (c *Context) Rect(x, y, w, h float32) {
 }
 
 // Creates new rounded rectangle shaped sub-path.
-func (c *Context) RoundRect(x, y, w, h, r float32) {
+func (c *Context) RoundedRect(x, y, w, h, r float32) {
 	if r < 0.1 {
 		c.Rect(x, y, w, h)
 	} else {

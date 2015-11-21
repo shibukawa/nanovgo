@@ -10,6 +10,15 @@ import (
 	//"time"
 )
 
+const (
+	ICON_SEARCH        = 0x1F50D
+	ICON_CIRCLED_CROSS = 0x2716
+	ICON_CHEVRON_RIGHT = 0xE75E
+	ICON_CHECK         = 0x2713
+	ICON_LOGIN         = 0xE740
+	ICON_TRASH         = 0xE729
+)
+
 var blowup bool
 var screenshot bool
 var premult bool
@@ -35,6 +44,16 @@ func renderDemo(ctx *nanovgo.Context, mx, my, width, height, t float32, data *De
 	drawLines(ctx, 120, height-50, 600, 50, t)
 	drawWidths(ctx, 10, 50, 30)
 	drawCaps(ctx, 10, 300, 30)
+
+	// Widgets
+	drawWindow(ctx, "Widgets `n Stuff", 50, 50, 300, 400)
+	var x float32 = 60.0
+	var y float32 = 95.0
+	drawButton(ctx, ICON_LOGIN, "Sign in", x+138, y, 140, 28, nanovgo.RGBA(0, 96, 128, 255))
+	y += 45
+
+	drawButton(ctx, ICON_TRASH, "Delete", x, y, 160, 28, nanovgo.RGBA(128, 16, 8, 255))
+	drawButton(ctx, 0, "Cancel", x+170, y, 110, 28, nanovgo.RGBA(0, 0, 0, 0))
 }
 
 func main() {

@@ -51,6 +51,116 @@ func sinF(a float32) float32 {
 func sqrtF(a float32) float32 {
 	return float32(math.Sqrt(float64(a)))
 }
+
+func drawWindow(ctx *nanovgo.Context, title string, x, y, w, h float32) {
+	var cornerRadius float32 = 3.0
+
+	ctx.Save()
+	//      ctx.ClearState(vg);
+
+	// Window
+	ctx.BeginPath()
+	ctx.RoundedRect(x, y, w, h, cornerRadius)
+	ctx.SetFillColor(nanovgo.RGBA(28, 30, 34, 192))
+	//      ctx.FillColor(vg, nanovgo.RGBA(0,0,0,128));
+	ctx.Fill()
+
+	// Drop shadow
+	shadowPaint := nanovgo.BoxGradient(x, y+2, w, h, cornerRadius*2, 10, nanovgo.RGBA(0, 0, 0, 128), nanovgo.RGBA(0, 0, 0, 0))
+	ctx.BeginPath()
+	ctx.Rect(x-10, y-10, w+20, h+30)
+	ctx.RoundedRect(x, y, w, h, cornerRadius)
+	ctx.PathWinding(nanovgo.HOLE)
+	ctx.SetFillPaint(shadowPaint)
+	ctx.Fill()
+
+	// Header
+	headerPaint := nanovgo.LinearGradient(x, y, x, y+15, nanovgo.RGBA(255, 255, 255, 8), nanovgo.RGBA(0, 0, 0, 16))
+	ctx.BeginPath()
+	ctx.RoundedRect(x+1, y+1, w-2, 30, cornerRadius-1)
+	ctx.SetFillPaint(headerPaint)
+	ctx.Fill()
+	ctx.BeginPath()
+	ctx.MoveTo(x+0.5, y+0.5+30)
+	ctx.LineTo(x+0.5+w-1, y+0.5+30)
+	ctx.SetStrokeColor(nanovgo.RGBA(0, 0, 0, 32))
+	ctx.Stroke()
+
+	ctx.SetFontSize(18.0)
+	ctx.SetFontFace("sans-bold")
+	ctx.SetTextAlign(nanovgo.ALIGN_CENTER | nanovgo.ALIGN_MIDDLE)
+
+	ctx.SetFontBlur(2)
+	ctx.SetFillColor(nanovgo.RGBA(0, 0, 0, 128))
+	ctx.Text(x+w/2, y+16+1, title)
+
+	ctx.SetFontBlur(0)
+	ctx.SetFillColor(nanovgo.RGBA(220, 220, 220, 160))
+	ctx.Text(x+w/2, y+16, title)
+
+	ctx.Restore()
+}
+
+func isBlack(col nanovgo.Color) bool {
+	return col.R == 0.0 && col.G == 0.0 && col.B == 0.0 && col.A == 0.0
+}
+
+func cpToUTF8(cp int) string {
+	return string([]rune{rune(cp)})
+}
+
+func drawButton(ctx *nanovgo.Context, preicon int, text string, x, y, w, h float32, col nanovgo.Color) {
+	var cornerRadius float32 = 4.0
+	var iw, tw float32
+
+	var alpha uint8
+	if isBlack(col) {
+		alpha = 16
+	} else {
+		alpha = 32
+	}
+	bg := nanovgo.LinearGradient(x, y, x, y+h, nanovgo.RGBA(255, 255, 255, alpha), nanovgo.RGBA(0, 0, 0, alpha))
+	ctx.BeginPath()
+	ctx.RoundedRect(x+1, y+1, w-2, h-2, cornerRadius-1)
+	if !isBlack(col) {
+		ctx.SetFillColor(col)
+		ctx.Fill()
+	}
+	ctx.SetFillPaint(bg)
+	ctx.Fill()
+
+	ctx.BeginPath()
+	ctx.RoundedRect(x+0.5, y+0.5, w-1, h-1, cornerRadius-0.5)
+	ctx.SetStrokeColor(nanovgo.RGBA(0, 0, 0, 48))
+	ctx.Stroke()
+
+	ctx.SetFontSize(20.0)
+	ctx.SetFontFace("sans-bold")
+	tw, _ = ctx.TextBounds(0, 0, text)
+	if preicon != 0 {
+		ctx.SetFontSize(h * 1.3)
+		ctx.SetFontFace("icons")
+		iw, _ = ctx.TextBounds(0, 0, cpToUTF8(preicon))
+		iw += h * 0.15
+	}
+
+	if preicon != 0 {
+		ctx.SetFontSize(h * 1.3)
+		ctx.SetFontFace("icons")
+		ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 96))
+		ctx.SetTextAlign(nanovgo.ALIGN_LEFT | nanovgo.ALIGN_MIDDLE)
+		ctx.Text(x+w*0.5-tw*0.5-iw*0.75, y+h*0.5, cpToUTF8(preicon))
+	}
+
+	ctx.SetFontSize(20.0)
+	ctx.SetFontFace("sans-bold")
+	ctx.SetTextAlign(nanovgo.ALIGN_LEFT | nanovgo.ALIGN_MIDDLE)
+	ctx.SetFillColor(nanovgo.RGBA(0, 0, 0, 160))
+	ctx.Text(x+w*0.5-tw*0.5+iw*0.25, y+h*0.5-1, text)
+	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 160))
+	ctx.Text(x+w*0.5-tw*0.5+iw*0.25, y+h*0.5, text)
+}
+
 func drawEyes(ctx *nanovgo.Context, x, y, w, h, mx, my, t float32) {
 	ex := w * 0.23
 	ey := h * 0.5
