@@ -699,7 +699,7 @@ func (p *glParams) renderFill(paint *Paint, scissor *nvgScissor, fringe float32,
 	c.vertexes[vertexOffset+3] = 1.0
 
 	// Setup uniforms for draw calls
-	var paintUniform *glFragUniforms
+	var paintFrag *glFragUniforms
 	if call.callType == glnvg_FILL {
 		var uniforms []glFragUniforms
 		uniforms, call.uniformOffset = c.allocFragUniforms(2)
@@ -708,15 +708,15 @@ func (p *glParams) renderFill(paint *Paint, scissor *nvgScissor, fringe float32,
 		u0.reset()
 		u0.setStrokeThr(-1.0)
 		u0.setType(nsvg_SHADER_SIMPLE)
-		paintUniform = &uniforms[1]
+		paintFrag = &uniforms[1]
 	} else {
-		var uniforms []glFragUniforms
-		uniforms, call.uniformOffset = c.allocFragUniforms(1)
-		paintUniform = &uniforms[0]
+		var frags []glFragUniforms
+		frags, call.uniformOffset = c.allocFragUniforms(1)
+		paintFrag = &frags[0]
 	}
 	// Fill shader
-	paintUniform.reset()
-	c.convertPaint(paintUniform, paint, scissor, fringe, fringe, -1.0)
+	paintFrag.reset()
+	c.convertPaint(paintFrag, paint, scissor, fringe, fringe, -1.0)
 }
 
 func (p *glParams) renderStroke(paint *Paint, scissor *nvgScissor, fringe float32, strokeWidth float32, paths []nvgPath) {
@@ -765,25 +765,28 @@ func (p *glParams) renderStroke(paint *Paint, scissor *nvgScissor, fringe float3
 		u1.reset()
 		c.convertPaint(u1, paint, scissor, strokeWidth, fringe, -1.0-0.5/266.0)
 	} else {
-		var uniforms []glFragUniforms
-		uniforms, call.uniformOffset = c.allocFragUniforms(1)
-		u0 := &uniforms[0]
-		u0.reset()
-		c.convertPaint(u0, paint, scissor, strokeWidth, fringe, -1.0)
+		var frags []glFragUniforms
+		frags, call.uniformOffset = c.allocFragUniforms(1)
+		f0 := &frags[0]
+		f0.reset()
+		c.convertPaint(f0, paint, scissor, strokeWidth, fringe, -1.0)
 	}
 }
 
 func (p *glParams) renderTriangles(paint *Paint, scissor *nvgScissor, vertexes []nvgVertex) {
 	c := p.context
-	p.context.calls = append(c.calls, glCall{})
-	call := &c.calls[len(c.calls)-1]
-	call.callType = glnvg_TRIANGLES
-	call.image = paint.image
 
 	triangleCount := len(vertexes)
 	vertexOffset := c.allocVertexMemory(triangleCount)
-	call.triangleOffset = vertexOffset / 4
-	call.triangleCount = triangleCount
+	callIndex := len(c.calls)
+
+	p.context.calls = append(c.calls, glCall{
+		callType:       glnvg_TRIANGLES,
+		image:          paint.image,
+		triangleOffset: vertexOffset / 4,
+		triangleCount:  triangleCount,
+	})
+	call := &c.calls[callIndex]
 
 	for i := 0; i < triangleCount; i++ {
 		vertex := &vertexes[i]
@@ -795,12 +798,12 @@ func (p *glParams) renderTriangles(paint *Paint, scissor *nvgScissor, vertexes [
 	}
 
 	// Fill shader
-	var uniforms []glFragUniforms
-	uniforms, call.uniformOffset = c.allocFragUniforms(1)
-	u0 := &uniforms[0]
-	u0.reset()
-	c.convertPaint(u0, paint, scissor, 1.0, 1.0, -1.0)
-	u0.setType(nsvg_SHADER_IMG)
+	var frags []glFragUniforms
+	frags, call.uniformOffset = c.allocFragUniforms(1)
+	f0 := &frags[0]
+	f0.reset()
+	c.convertPaint(f0, paint, scissor, 1.0, 1.0, -1.0)
+	f0.setType(nsvg_SHADER_IMG)
 }
 
 func (p *glParams) renderDelete() {
