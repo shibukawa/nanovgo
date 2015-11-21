@@ -76,7 +76,7 @@ func (pg *PerfGraph) RenderGraph(ctx *nanovgo.Context, x, y float32) {
 			if v > 80.0 {
 				v = 80.0
 			}
-			vx := float32(i) / float32(nvg_GRAPH_HISTORY_COUNT-1) * w
+			vx := x + float32(i) / float32(nvg_GRAPH_HISTORY_COUNT-1) * w
 			vy := y + h - ((v / 80.0) * h)
 			ctx.LineTo(vx, vy)
 		}
@@ -86,7 +86,7 @@ func (pg *PerfGraph) RenderGraph(ctx *nanovgo.Context, x, y float32) {
 			if v > 100.0 {
 				v = 100.0
 			}
-			vx := float32(i) / float32(nvg_GRAPH_HISTORY_COUNT-1) * w
+			vx := x + float32(i) / float32(nvg_GRAPH_HISTORY_COUNT-1) * w
 			vy := y + h - ((v / 100.0) * h)
 			ctx.LineTo(vx, vy)
 		}
@@ -96,7 +96,7 @@ func (pg *PerfGraph) RenderGraph(ctx *nanovgo.Context, x, y float32) {
 			if v > 20.0 {
 				v = 20.0
 			}
-			vx := float32(i) / float32(nvg_GRAPH_HISTORY_COUNT-1) * w
+			vx := x + float32(i) / float32(nvg_GRAPH_HISTORY_COUNT-1) * w
 			vy := y + h - ((v / 20.0) * h)
 			ctx.LineTo(vx, vy)
 		}

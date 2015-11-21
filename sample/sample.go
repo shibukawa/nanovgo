@@ -7,7 +7,6 @@ import (
 	"github.com/goxjs/glfw"
 	"github.com/shibukawa/nanovgo"
 	"github.com/shibukawa/nanovgo/perfgraph"
-	//"time"
 )
 
 const (

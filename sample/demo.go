@@ -474,7 +474,7 @@ func drawLines(ctx *nanovgo.Context, x, y, w, h, t float32) {
 
 func drawWidths(ctx *nanovgo.Context, x, y, width float32) {
 	ctx.Save()
-	ctx.SetStrokeColor(nanovgo.RGBA(255, 127, 255, 255))
+	ctx.SetStrokeColor(nanovgo.RGBA(0, 0, 0, 255))
 	for i := 0; i < 20; i++ {
 		w := (float32(i) + 0.5) * 0.1
 		ctx.SetStrokeWidth(w)
