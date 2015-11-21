@@ -1,13 +1,12 @@
 package nanovgo
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"github.com/goxjs/gl"
 	"log"
-	"math"
 	"strings"
+	"unsafe"
 )
 
 const (
@@ -107,7 +106,7 @@ type glContext struct {
 	flags        CreateFlags
 	calls        []glCall
 	paths        []glPath
-	vertexes     []byte
+	vertexes     []float32
 	uniforms     []glFragUniforms
 
 	stencilMask     uint32
@@ -169,17 +168,10 @@ func (c *glContext) checkError(str string) {
 	}
 }
 
-func (c *glContext) appendVertex(vertexes []nvgVertex) {
+func (c *glContext) allocVertexMemory(size int) int {
 	offset := len(c.vertexes)
-	c.vertexes = append(c.vertexes, make([]byte, 16*len(vertexes))...)
-	subVertexes := c.vertexes[offset:]
-	for i := range vertexes {
-		vertex := &(vertexes[i])
-		binary.LittleEndian.PutUint32(subVertexes[i*4*4:], math.Float32bits(vertex.x))
-		binary.LittleEndian.PutUint32(subVertexes[i*4*4+4:], math.Float32bits(vertex.y))
-		binary.LittleEndian.PutUint32(subVertexes[i*4*4+8:], math.Float32bits(vertex.u))
-		binary.LittleEndian.PutUint32(subVertexes[i*4*4+12:], math.Float32bits(vertex.v))
-	}
+	c.vertexes = append(c.vertexes, make([]float32, 4*size)...)
+	return offset
 }
 
 func (c *glContext) allocFragUniforms(n int) ([]glFragUniforms, int) {
@@ -567,9 +559,13 @@ func (p *glParams) renderFlush() {
 		c.stencilFuncRef = 0
 		c.stencilFuncMask = 0xffffffff
 
+		// Convert []float32 list to []byte without copy
+		var b []byte
+		b = (*(*[1 << 31]byte)(unsafe.Pointer(&c.vertexes[0])))[:len(c.vertexes)*4]
+
 		// Upload vertex data
 		gl.BindBuffer(gl.ARRAY_BUFFER, c.vertexBuffer)
-		gl.BufferData(gl.ARRAY_BUFFER, c.vertexes, gl.STREAM_DRAW)
+		gl.BufferData(gl.ARRAY_BUFFER, b, gl.STREAM_DRAW)
 		gl.EnableVertexAttribArray(gl.Attrib{0})
 		gl.EnableVertexAttribArray(gl.Attrib{1})
 		gl.VertexAttribPointer(gl.Attrib{0}, 2, gl.FLOAT, false, 4*4, 0)
@@ -622,9 +618,7 @@ func (p *glParams) renderFill(paint *Paint, scissor *nvgScissor, fringe float32,
 	}
 
 	// Allocate vertices for all the paths
-	newVertexes := make([]nvgVertex, maxVertexCount(paths)+6)
-	vertexes := newVertexes[:]
-	vertexOffset := len(c.vertexes) / 16 // c.vertexes is []byte, but data unit is [4]float32
+	vertexOffset := c.allocVertexMemory(maxVertexCount(paths) + 6)
 
 	for i := range paths {
 		glPath := &glPaths[i]
@@ -632,23 +626,33 @@ func (p *glParams) renderFill(paint *Paint, scissor *nvgScissor, fringe float32,
 
 		fillCount := len(path.fills)
 		if fillCount > 0 {
-			glPath.fillOffset = vertexOffset
+			glPath.fillOffset = vertexOffset / 4
 			glPath.fillCount = fillCount
-			copy(vertexes, path.fills)
-			vertexes = vertexes[fillCount:]
-			vertexOffset += fillCount
+			for j := 0; j < fillCount; j++ {
+				vertex := &path.fills[j]
+				c.vertexes[vertexOffset] = vertex.x
+				c.vertexes[vertexOffset+1] = vertex.y
+				c.vertexes[vertexOffset+2] = vertex.u
+				c.vertexes[vertexOffset+3] = vertex.v
+				vertexOffset += 4
+			}
 		} else {
 			glPath.fillOffset = 0
 			glPath.fillCount = 0
 		}
 
 		strokeCount := len(path.strokes)
-		if fillCount > 0 {
-			glPath.strokeOffset = vertexOffset
+		if strokeCount > 0 {
+			glPath.strokeOffset = vertexOffset / 4
 			glPath.strokeCount = strokeCount
-			copy(vertexes, path.strokes)
-			vertexes = vertexes[strokeCount:]
-			vertexOffset += strokeCount
+			for j := 0; j < strokeCount; j++ {
+				vertex := &path.strokes[j]
+				c.vertexes[vertexOffset] = vertex.x
+				c.vertexes[vertexOffset+1] = vertex.y
+				c.vertexes[vertexOffset+2] = vertex.u
+				c.vertexes[vertexOffset+3] = vertex.v
+				vertexOffset += 4
+			}
 		} else {
 			glPath.strokeOffset = 0
 			glPath.strokeCount = 0
@@ -656,18 +660,43 @@ func (p *glParams) renderFill(paint *Paint, scissor *nvgScissor, fringe float32,
 	}
 
 	// Quad
-	call.triangleOffset = vertexOffset
+	call.triangleOffset = vertexOffset / 4
 	call.triangleCount = 6
-	vertexes[0] = nvgVertex{bounds[0], bounds[3], 0.5, 1.0}
-	vertexes[1] = nvgVertex{bounds[2], bounds[3], 0.5, 1.0}
-	vertexes[2] = nvgVertex{bounds[2], bounds[1], 0.5, 1.0}
 
-	vertexes[3] = nvgVertex{bounds[0], bounds[3], 0.5, 1.0}
-	vertexes[4] = nvgVertex{bounds[2], bounds[1], 0.5, 1.0}
-	vertexes[5] = nvgVertex{bounds[0], bounds[1], 0.5, 1.0}
+	c.vertexes[vertexOffset] = bounds[0]
+	c.vertexes[vertexOffset+1] = bounds[3]
+	c.vertexes[vertexOffset+2] = 0.5
+	c.vertexes[vertexOffset+3] = 1.0
+	vertexOffset += 4
 
-	// Register all new vertexes to GLContext as []byte for OpenGL API
-	c.appendVertex(newVertexes)
+	c.vertexes[vertexOffset] = bounds[2]
+	c.vertexes[vertexOffset+1] = bounds[3]
+	c.vertexes[vertexOffset+2] = 0.5
+	c.vertexes[vertexOffset+3] = 1.0
+	vertexOffset += 4
+
+	c.vertexes[vertexOffset] = bounds[2]
+	c.vertexes[vertexOffset+1] = bounds[1]
+	c.vertexes[vertexOffset+2] = 0.5
+	c.vertexes[vertexOffset+3] = 1.0
+	vertexOffset += 4
+
+	c.vertexes[vertexOffset] = bounds[0]
+	c.vertexes[vertexOffset+1] = bounds[3]
+	c.vertexes[vertexOffset+2] = 0.5
+	c.vertexes[vertexOffset+3] = 1.0
+	vertexOffset += 4
+
+	c.vertexes[vertexOffset] = bounds[2]
+	c.vertexes[vertexOffset+1] = bounds[1]
+	c.vertexes[vertexOffset+2] = 0.5
+	c.vertexes[vertexOffset+3] = 1.0
+	vertexOffset += 4
+
+	c.vertexes[vertexOffset] = bounds[0]
+	c.vertexes[vertexOffset+1] = bounds[1]
+	c.vertexes[vertexOffset+2] = 0.5
+	c.vertexes[vertexOffset+3] = 1.0
 
 	// Setup uniforms for draw calls
 	var paintUniform *glFragUniforms
@@ -701,9 +730,7 @@ func (p *glParams) renderStroke(paint *Paint, scissor *nvgScissor, fringe float3
 	call.image = paint.image
 
 	// Allocate vertices for all the paths
-	newVertexes := make([]nvgVertex, maxVertexCount(paths))
-	vertexes := newVertexes[:]
-	vertexOffset := len(c.vertexes) / 16 // c.vertexes is []byte, but data unit is [4]float32
+	vertexOffset := c.allocVertexMemory(maxVertexCount(paths))
 
 	for i := range paths {
 		glPath := &glPaths[i]
@@ -711,19 +738,21 @@ func (p *glParams) renderStroke(paint *Paint, scissor *nvgScissor, fringe float3
 
 		strokeCount := len(path.strokes)
 		if strokeCount > 0 {
-			glPath.strokeOffset = vertexOffset
+			glPath.strokeOffset = vertexOffset / 4
 			glPath.strokeCount = strokeCount
-			copy(vertexes, path.strokes)
-			vertexes = vertexes[strokeCount:]
-			vertexOffset += strokeCount
+			for j := 0; j < strokeCount; j++ {
+				vertex := &path.strokes[j]
+				c.vertexes[vertexOffset] = vertex.x
+				c.vertexes[vertexOffset+1] = vertex.y
+				c.vertexes[vertexOffset+2] = vertex.u
+				c.vertexes[vertexOffset+3] = vertex.v
+				vertexOffset += 4
+			}
 		} else {
 			glPath.strokeOffset = 0
 			glPath.strokeCount = 0
 		}
 	}
-
-	// Register all new vertexes to GLContext as []byte for OpenGL API
-	c.appendVertex(newVertexes)
 
 	// Fill shader
 	if c.flags&STENCIL_STROKES != 0 {
@@ -751,10 +780,19 @@ func (p *glParams) renderTriangles(paint *Paint, scissor *nvgScissor, vertexes [
 	call.callType = glnvg_TRIANGLES
 	call.image = paint.image
 
-	call.triangleOffset = len(c.vertexes) / 16 // c.vertexes is []byte, but data unit is [4]float32
-	call.triangleCount = len(vertexes)
+	triangleCount := len(vertexes)
+	vertexOffset := c.allocVertexMemory(triangleCount)
+	call.triangleOffset = vertexOffset / 4
+	call.triangleCount = triangleCount
 
-	c.appendVertex(vertexes)
+	for i := 0; i < triangleCount; i++ {
+		vertex := &vertexes[i]
+		c.vertexes[vertexOffset] = vertex.x
+		c.vertexes[vertexOffset+1] = vertex.y
+		c.vertexes[vertexOffset+2] = vertex.u
+		c.vertexes[vertexOffset+3] = vertex.v
+		vertexOffset += 4
+	}
 
 	// Fill shader
 	var uniforms []glFragUniforms
