@@ -12,7 +12,7 @@ const (
 	FONS_INIT_FONTS       = 4
 	FONS_INIT_GLYPHS      = 256
 	FONS_INIT_ATLAS_NODES = 256
-	FONS_INVALID          = -1
+	INVALID = -1
 )
 
 type FONSAlign int
@@ -130,7 +130,7 @@ func New(width, height int) *FontStash {
 func (stash *FontStash) AddFont(name, path string) int {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return FONS_INVALID
+		return INVALID
 	}
 	return stash.AddFontFromMemory(name, data, 1)
 }
@@ -138,7 +138,7 @@ func (stash *FontStash) AddFont(name, path string) int {
 func (stash *FontStash) AddFontFromMemory(name string, data []byte, freeData uint8) int {
 	fontInstance, err := truetype.InitFont(data, 0)
 	if err != nil {
-		return FONS_INVALID
+		return INVALID
 	}
 	ascent, descent, lineGap := fontInstance.GetFontVMetrics()
 	fh := float32(ascent - descent)
@@ -163,7 +163,7 @@ func (stash *FontStash) GetFontByName(name string) int {
 			return i
 		}
 	}
-	return FONS_INVALID
+	return INVALID
 }
 
 func (stash *FontStash) SetSize(size float32) {
@@ -338,6 +338,7 @@ func (stash *FontStash) TextIterForRunes(x, y float32, runes []rune) *TextIterat
 		width, _ := stash.TextBoundsOfRunes(x, y, runes)
 		x -= width * 0.5
 	}
+	y += stash.getVerticalAlign(font, state.align, state.size * 10.0)
 	iter := &TextIterator{
 		stash:        stash,
 		font:         font,

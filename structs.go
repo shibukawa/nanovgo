@@ -93,7 +93,7 @@ func (s *nvgState) reset() {
 	s.lineHeight = 1.0
 	s.fontBlur = 0.0
 	s.textAlign = ALIGN_LEFT | ALIGN_BASELINE
-	s.fontId = fontstashmini.FONS_INVALID
+	s.fontId = fontstashmini.INVALID
 }
 
 func (s *nvgState) getFontScale() float32 {

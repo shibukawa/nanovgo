@@ -149,6 +149,7 @@ func (c *Context) BeginFrame(windowWidth, windowHeight int, devicePixelRatio flo
 	c.Save()
 	c.Reset()
 
+	c.setDevicePixelRatio(devicePixelRatio)
 	c.params.renderViewport(windowWidth, windowHeight)
 
 	c.drawCallCount = 0
@@ -846,7 +847,7 @@ func (c *Context) Text(x, y float32, str string) float32 {
 	state := c.getState()
 	scale := state.getFontScale() * c.devicePxRatio
 	invScale := 1.0 / scale
-	if state.fontId == fontstashmini.FONS_INVALID {
+	if state.fontId == fontstashmini.INVALID {
 		return 0
 	}
 
@@ -887,19 +888,18 @@ func (c *Context) Text(x, y float32, str string) float32 {
 		}
 		prevIter = iter
 		// Transform corners.
-		var c [8]float32
-		c[0], c[1] = state.xform.Point(quad.X0*invScale, quad.Y0*invScale)
-		c[2], c[3] = state.xform.Point(quad.X1*invScale, quad.Y0*invScale)
-		c[4], c[5] = state.xform.Point(quad.X1*invScale, quad.Y1*invScale)
-		c[6], c[7] = state.xform.Point(quad.X0*invScale, quad.Y1*invScale)
+		c0, c1 := state.xform.Point(quad.X0*invScale, quad.Y0*invScale)
+		c2, c3 := state.xform.Point(quad.X1*invScale, quad.Y0*invScale)
+		c4, c5 := state.xform.Point(quad.X1*invScale, quad.Y1*invScale)
+		c6, c7 := state.xform.Point(quad.X0*invScale, quad.Y1*invScale)
 		// Create triangles
 		if index+6 <= vertexCount {
-			(&vertexes[index]).set(c[0], c[1], quad.S0, quad.T0)
-			(&vertexes[index+1]).set(c[4], c[5], quad.S1, quad.T1)
-			(&vertexes[index+2]).set(c[2], c[3], quad.S1, quad.T0)
-			(&vertexes[index+3]).set(c[0], c[1], quad.S0, quad.T0)
-			(&vertexes[index+4]).set(c[6], c[7], quad.S0, quad.T1)
-			(&vertexes[index+5]).set(c[4], c[5], quad.S1, quad.T1)
+			(&vertexes[index]).set(c0, c1, quad.S0, quad.T0)
+			(&vertexes[index+1]).set(c4, c5, quad.S1, quad.T1)
+			(&vertexes[index+2]).set(c2, c3, quad.S1, quad.T0)
+			(&vertexes[index+3]).set(c0, c1, quad.S0, quad.T0)
+			(&vertexes[index+4]).set(c6, c7, quad.S0, quad.T1)
+			(&vertexes[index+5]).set(c4, c5, quad.S1, quad.T1)
 			index += 6
 		}
 	}
@@ -914,7 +914,7 @@ func (c *Context) Text(x, y float32, str string) float32 {
 // Draws text string at specified location. If end is specified only the sub-string up to the end is drawn.
 func (c *Context) TextBox(x, y, breakRowWidth float32, str string) {
 	state := c.getState()
-	if state.fontId == fontstashmini.FONS_INVALID {
+	if state.fontId == fontstashmini.INVALID {
 		return
 	}
 	runes := []rune(str)
@@ -966,7 +966,7 @@ func (c *Context) TextBounds(x, y float32, str string) (float32, []float32) {
 	state := c.getState()
 	scale := state.getFontScale() * c.devicePxRatio
 	invScale := 1.0 / scale
-	if state.fontId == fontstashmini.FONS_INVALID {
+	if state.fontId == fontstashmini.INVALID {
 		return 0, nil
 	}
 
@@ -1000,7 +1000,7 @@ func (c *Context) TextGlyphPositions(x, y float32, str string) []GlyphPosition {
 	state := c.getState()
 	scale := state.getFontScale() * c.devicePxRatio
 	invScale := 1.0 / scale
-	if state.fontId == fontstashmini.FONS_INVALID {
+	if state.fontId == fontstashmini.INVALID {
 		return nil
 	}
 
@@ -1043,7 +1043,7 @@ func (c *Context) TextMetrics() (float32, float32, float32) {
 	state := c.getState()
 	scale := state.getFontScale() * c.devicePxRatio
 	invScale := 1.0 / scale
-	if state.fontId == fontstashmini.FONS_INVALID {
+	if state.fontId == fontstashmini.INVALID {
 		return 0, 0, 0
 	}
 
@@ -1068,7 +1068,7 @@ func (c *Context) textBreakLinesOfRunes(runes []rune, breakRowWidth float32, max
 	state := c.getState()
 	scale := state.getFontScale() * c.devicePxRatio
 	invScale := 1.0 / scale
-	if state.fontId == fontstashmini.FONS_INVALID {
+	if state.fontId == fontstashmini.INVALID {
 		return nil
 	}
 
