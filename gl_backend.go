@@ -229,9 +229,7 @@ func (c *glContext) convertPaint(frag *glFragUniforms, paint *Paint, scissor *nv
 			return errors.New("invalid texture in GLParams.convertPaint")
 		}
 		if tex.flags&IMAGE_FLIPY != 0 {
-			flipped := TransformMatrixScale(1.0, -1.0)
-			flipped.Multiply(paint.xform)
-			frag.setPaintMat(flipped.Inverse().ToMat3x4())
+			frag.setPaintMat(ScaleMatrix(1.0, -1.0).Multiply(paint.xform).Inverse().ToMat3x4())
 		} else {
 			frag.setPaintMat(paint.xform.Inverse().ToMat3x4())
 		}
@@ -780,7 +778,7 @@ func (p *glParams) renderTriangles(paint *Paint, scissor *nvgScissor, vertexes [
 	vertexOffset := c.allocVertexMemory(triangleCount)
 	callIndex := len(c.calls)
 
-	p.context.calls = append(c.calls, glCall{
+	c.calls = append(c.calls, glCall{
 		callType:       glnvg_TRIANGLES,
 		image:          paint.image,
 		triangleOffset: vertexOffset / 4,

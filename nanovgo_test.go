@@ -54,20 +54,20 @@ func TestStateSaveRestore2(t *testing.T) {
 	c.Reset()
 
 	topState := c.getState()
-	topState.xform = TransformMatrixTranslate(10, 5)
+	topState.xform = TranslateMatrix(10, 5)
 
 	c.Save()
 
 	nextState := c.getState()
-	if !equal(nextState.xform, TransformMatrixTranslate(10, 5)) {
+	if !equal(nextState.xform, TranslateMatrix(10, 5)) {
 		t.Errorf("initial xform should be same with parent's one, but %v", nextState.xform)
 	}
-	nextState.xform = TransformMatrixScale(20, 30)
+	nextState.xform = ScaleMatrix(20, 30)
 
 	c.Restore()
 
 	topStateAgain := c.getState()
-	if !equal(topStateAgain.xform, TransformMatrixTranslate(10, 5)) {
+	if !equal(topStateAgain.xform, TranslateMatrix(10, 5)) {
 		t.Errorf("Restore() should set saved xform, but %v", topStateAgain.xform)
 	}
 }

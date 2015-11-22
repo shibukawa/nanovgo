@@ -15,7 +15,7 @@ type Paint struct {
 }
 
 func (p *Paint) setPaintColor(color Color) {
-	p.xform.Identity()
+	p.xform = IdentityMatrix()
 	p.extent[0] = 0.0
 	p.extent[1] = 0.0
 	p.radius = 0.0
@@ -59,7 +59,7 @@ func RadialGradient(cx, cy, inR, outR float32, iColor, oColor Color) Paint {
 	f := outR - inR
 
 	return Paint{
-		xform:      TransformMatrixTranslate(cx, cy),
+		xform:      TranslateMatrix(cx, cy),
 		extent:     [2]float32{r, r},
 		radius:     0.0,
 		feather:    maxF(1.0, f),
@@ -75,7 +75,7 @@ func RadialGradient(cx, cy, inR, outR float32, iColor, oColor Color) Paint {
 // The gradient is transformed by the current transform when it is passed to Context.FillPaint() or Context.StrokePaint().
 func BoxGradient(x, y, w, h, r, f float32, iColor, oColor Color) Paint {
 	return Paint{
-		xform:      TransformMatrixTranslate(x+w*0.5, y+h*0.5),
+		xform:      TranslateMatrix(x+w*0.5, y+h*0.5),
 		extent:     [2]float32{w * 0.5, h * 0.5},
 		radius:     r,
 		feather:    maxF(1.0, f),
@@ -88,7 +88,7 @@ func BoxGradient(x, y, w, h, r, f float32, iColor, oColor Color) Paint {
 // (ex,ey) the size of one image, angle rotation around the top-left corner, image is handle to the image to render.
 // The gradient is transformed by the current transform when it is passed to Context.FillPaint() or Context.StrokePaint().
 func ImagePattern(cx, cy, w, h, angle float32, img int, alpha float32) Paint {
-	xform := TransformMatrixRotate(angle)
+	xform := RotateMatrix(angle)
 	xform[4] = cx
 	xform[5] = cy
 	color := RGBAf(1, 1, 1, alpha)

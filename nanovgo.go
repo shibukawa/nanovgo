@@ -282,7 +282,8 @@ func (c *Context) GlobalAlpha() float32 {
 
 // Premultiplies current coordinate system by specified matrix.
 func (ctx *Context) SetTransform(t TransformMatrix) {
-	ctx.getState().xform.PreMultiply(t)
+	state := ctx.getState()
+	state.xform = state.xform.PreMultiply(t)
 }
 
 // Premultiplies current coordinate system by specified matrix.
@@ -292,37 +293,44 @@ func (ctx *Context) SetTransform(t TransformMatrix) {
 //   [0 0 1]
 func (ctx *Context) SetTransformByValue(a, b, c, d, e, f float32) {
 	t := TransformMatrix{a, b, c, d, e, f}
-	ctx.getState().xform.PreMultiply(t)
+	state := ctx.getState()
+	state.xform = state.xform.PreMultiply(t)
 }
 
 // Resets current transform to a identity matrix.
 func (c *Context) ResetTransform() {
-	c.getState().xform.Identity()
+	state := c.getState()
+	state.xform = IdentityMatrix()
 }
 
 // Translates current coordinate system.
 func (c *Context) Translate(x, y float32) {
-	c.getState().xform.PreMultiply(TransformMatrixTranslate(x, y))
+	state := c.getState()
+	state.xform = state.xform.PreMultiply(TranslateMatrix(x, y))
 }
 
 // Rotates current coordinate system. Angle is specified in radians.
 func (c *Context) Rotate(angle float32) {
-	c.getState().xform.PreMultiply(TransformMatrixRotate(angle))
+	state := c.getState()
+	state.xform = state.xform.PreMultiply(RotateMatrix(angle))
 }
 
 // Skews the current coordinate system along X axis. Angle is specified in radians.
 func (c *Context) SkewX(angle float32) {
-	c.getState().xform.PreMultiply(TransformMatrixSkewX(angle))
+	state := c.getState()
+	state.xform = state.xform.PreMultiply(SkewXMatrix(angle))
 }
 
 // Skews the current coordinate system along Y axis. Angle is specified in radians.
 func (c *Context) SkewY(angle float32) {
-	c.getState().xform.PreMultiply(TransformMatrixSkewY(angle))
+	state := c.getState()
+	state.xform = state.xform.PreMultiply(SkewYMatrix(angle))
 }
 
 // Scales the current coordinate system.
 func (c *Context) Scale(x, y float32) {
-	c.getState().xform.PreMultiply(TransformMatrixScale(x, y))
+	state := c.getState()
+	state.xform = state.xform.PreMultiply(ScaleMatrix(x, y))
 }
 
 // Returns the top part (a-f) of the current transformation matrix.
@@ -343,7 +351,7 @@ func (c *Context) SetStrokeColor(color Color) {
 func (c *Context) SetStrokePaint(paint Paint) {
 	state := c.getState()
 	state.stroke = paint
-	state.stroke.xform.Multiply(state.xform)
+	state.stroke.xform = state.stroke.xform.Multiply(state.xform)
 }
 
 // Sets current fill style to a solid color.
@@ -355,7 +363,7 @@ func (c *Context) SetFillColor(color Color) {
 func (c *Context) SetFillPaint(paint Paint) {
 	state := c.getState()
 	state.fill = paint
-	state.fill.xform.Multiply(state.xform)
+	state.fill.xform = state.fill.xform.Multiply(state.xform)
 }
 
 // Creates image by loading it from the disk from specified file name.
@@ -435,9 +443,7 @@ func (c *Context) Scissor(x, y, w, h float32) {
 	w = maxF(0.0, w)
 	h = maxF(0.0, h)
 
-	state.scissor.xform = TransformMatrixTranslate(x+w*0.5, y+h*0.5)
-	state.scissor.xform.Multiply(state.xform)
-
+	state.scissor.xform = TranslateMatrix(x+w*0.5, y+h*0.5).Multiply(state.xform)
 	state.scissor.extent = [2]float32{w * 0.5, h * 0.5}
 }
 
@@ -455,12 +461,9 @@ func (c *Context) IntersectScissor(x, y, w, h float32) {
 		return
 	}
 
-	pXform := state.scissor.xform
+	pXform := state.scissor.xform.Multiply(state.xform.Inverse())
 	ex := state.scissor.extent[0]
 	ey := state.scissor.extent[1]
-
-	invXform := state.xform.Inverse()
-	pXform.Multiply(invXform)
 
 	teX := ex * absF(pXform[0]) * ey * absF(pXform[2])
 	teY := ex * absF(pXform[1]) * ey * absF(pXform[3])

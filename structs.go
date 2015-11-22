@@ -80,9 +80,8 @@ func (s *nvgState) reset() {
 	s.lineCap = BUTT
 	s.lineJoin = MITER
 	s.alpha = 1.0
-	s.xform.Identity()
-
-	s.scissor.xform.Identity()
+	s.xform = IdentityMatrix()
+	s.scissor.xform = IdentityMatrix()
 	s.scissor.xform[0] = 0.0
 	s.scissor.xform[3] = 0.0
 	s.scissor.extent[0] = -1.0
