@@ -73,7 +73,7 @@ func drawWindow(ctx *nanovgo.Context, title string, x, y, w, h float32) {
 
 	ctx.Save()
 	defer ctx.Restore()
-	//      ctx.ClearState();
+	//      ctx.Reset();
 
 	// Window
 	ctx.BeginPath()

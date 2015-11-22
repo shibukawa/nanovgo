@@ -124,7 +124,7 @@ func (pg *PerfGraph) RenderGraph(ctx *nanovgo.Context, x, y float32) {
 		ctx.SetFontSize(15.0)
 		ctx.SetTextAlign(nanovgo.ALIGN_RIGHT | nanovgo.ALIGN_BOTTOM)
 		ctx.SetFillColor(averageTextColor)
-		ctx.Text(x+w-3, y+1, fmt.Sprintf("%.2f ms", avg*1000.0))
+		ctx.Text(x+w-3, y+h+1, fmt.Sprintf("%.2f ms", avg*1000.0))
 	case RENDER_PERCENT:
 		ctx.SetFontSize(18.0)
 		ctx.SetTextAlign(nanovgo.ALIGN_RIGHT | nanovgo.ALIGN_TOP)

@@ -22,7 +22,7 @@ import (
 // Solid color is simply defined as a color value, different kinds of paints can be created
 // using nanovgo.LinearGradient(), nanovgo.BoxGradient(), nanovgo.RadialGradient() and nanovgo.ImagePattern().
 //
-// Current render style can be saved and restored using nvgSave() and nvgRestore().
+// Current render style can be saved and restored using Save() and Restore().
 //
 // Transforms
 //
@@ -38,7 +38,7 @@ import (
 // Apart from nvgResetTransform(), each transformation function first creates
 // specific transformation matrix and pre-multiplies the current transformation by it.
 //
-// Current coordinate system (transformation) can be saved and restored using nvgSave() and nvgRestore().
+// Current coordinate system (transformation) can be saved and restored using Save() and Restore().
 //
 // Images
 //
@@ -145,7 +145,7 @@ func (c *Context) BeginFrame(windowWidth, windowHeight int, devicePixelRatio flo
 	/*log.Printf("Tris: draws:%d  fill:%d  stroke:%d  text:%d  TOT:%d\n",
 	c.drawCallCount, c.fillTriCount, c.strokeTriCount, c.textTriCount,
 	c.drawCallCount+c.fillTriCount+c.strokeTriCount+c.textTriCount)*/
-	c.states = c.states[:]
+	c.states = c.states[:0]
 	c.Save()
 	c.Reset()
 
