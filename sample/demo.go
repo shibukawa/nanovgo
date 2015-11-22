@@ -72,6 +72,7 @@ func drawWindow(ctx *nanovgo.Context, title string, x, y, w, h float32) {
 	var cornerRadius float32 = 3.0
 
 	ctx.Save()
+	defer ctx.Restore()
 	//      ctx.ClearState();
 
 	// Window
@@ -113,8 +114,6 @@ func drawWindow(ctx *nanovgo.Context, title string, x, y, w, h float32) {
 	ctx.SetFontBlur(0)
 	ctx.SetFillColor(nanovgo.RGBA(220, 220, 220, 160))
 	ctx.Text(x+w/2, y+16, title)
-
-	ctx.Restore()
 }
 
 func drawSearchBox(ctx *nanovgo.Context, text string, x, y, w, h float32) {
@@ -312,6 +311,7 @@ func drawSlider(ctx *nanovgo.Context, pos, x, y, w, h float32) {
 	var kr float32 = float32(int(h * 0.25))
 
 	ctx.Save()
+	defer ctx.Restore()
 	//      ctx.ClearState(vg);
 
 	// Slot
@@ -343,8 +343,6 @@ func drawSlider(ctx *nanovgo.Context, pos, x, y, w, h float32) {
 	ctx.Circle(x+float32(int(pos*w)), cy, kr-0.5)
 	ctx.SetStrokeColor(nanovgo.RGBA(0, 0, 0, 92))
 	ctx.Stroke()
-
-	ctx.Restore()
 }
 
 func drawEyes(ctx *nanovgo.Context, x, y, w, h, mx, my, t float32) {
@@ -511,6 +509,7 @@ func drawSpinner(ctx *nanovgo.Context, cx, cy, r, t float32) {
 	r1 := r * 0.75
 
 	ctx.Save()
+	defer ctx.Restore()
 
 	ctx.BeginPath()
 	ctx.Arc(cx, cy, r0, a0, a1, nanovgo.CW)
@@ -523,8 +522,6 @@ func drawSpinner(ctx *nanovgo.Context, cx, cy, r, t float32) {
 	paint := nanovgo.LinearGradient(ax, ay, bx, by, nanovgo.RGBA(0, 0, 0, 0), nanovgo.RGBA(0, 0, 0, 128))
 	ctx.SetFillPaint(paint)
 	ctx.Fill()
-
-	ctx.Restore()
 }
 
 func drawThumbnails(ctx *nanovgo.Context, x, y, w, h float32, images []int, t float32) {
@@ -537,7 +534,7 @@ func drawThumbnails(ctx *nanovgo.Context, x, y, w, h float32, images []int, t fl
 	u2 := (1 - cosF(t*0.2)) * 0.5
 
 	ctx.Save()
-	ctx.Reset()
+	defer ctx.Restore()
 
 	// Drop shadow
 	shadowPaint := nanovgo.BoxGradient(x, y+4, w, h, cornerRadius*2, 20, nanovgo.RGBA(0, 0, 0, 128), nanovgo.RGBA(0, 0, 0, 0))
@@ -557,59 +554,59 @@ func drawThumbnails(ctx *nanovgo.Context, x, y, w, h float32, images []int, t fl
 	ctx.SetFillColor(nanovgo.RGBA(200, 200, 200, 255))
 	ctx.Fill()
 
-	ctx.Save()
-	ctx.Scissor(x, y, w, h)
-	ctx.Translate(0, -(stackh-h)*u)
+	ctx.Block(func() {
+		ctx.Scissor(x, y, w, h)
+		ctx.Translate(0, -(stackh-h)*u)
 
-	dv := 1.0 / float32(len(images)-1)
+		dv := 1.0 / float32(len(images)-1)
 
-	for i, imageId := range images {
-		tx := x + 10.0
-		ty := y + 10.0
-		tx += float32(i%2) * (thumb + 10.0)
-		ty += float32(i/2) * (thumb + 10.0)
-		imgW, imgH, _ := ctx.ImageSize(imageId)
-		var iw, ih, ix, iy float32
-		if imgW < imgH {
-			iw = thumb
-			ih = iw * float32(imgH) / float32(imgW)
-			ix = 0
-			iy = -(ih - thumb) * 0.5
-		} else {
-			ih = thumb
-			iw = ih * float32(imgW) / float32(imgH)
-			ix = -(iw - thumb) * 0.5
-			iy = 0
+		for i, imageId := range images {
+			tx := x + 10.0
+			ty := y + 10.0
+			tx += float32(i%2) * (thumb + 10.0)
+			ty += float32(i/2) * (thumb + 10.0)
+			imgW, imgH, _ := ctx.ImageSize(imageId)
+			var iw, ih, ix, iy float32
+			if imgW < imgH {
+				iw = thumb
+				ih = iw * float32(imgH) / float32(imgW)
+				ix = 0
+				iy = -(ih - thumb) * 0.5
+			} else {
+				ih = thumb
+				iw = ih * float32(imgW) / float32(imgH)
+				ix = -(iw - thumb) * 0.5
+				iy = 0
+			}
+
+			v := float32(i) * dv
+			a := clampF((u2-v)/dv, 0, 1)
+
+			if a < 1.0 {
+				drawSpinner(ctx, tx+thumb/2, ty+thumb/2, thumb*0.25, t)
+			}
+
+			imgPaint := nanovgo.ImagePattern(tx+ix, ty+iy, iw, ih, 0.0/180.0*nanovgo.PI, imageId, a)
+			ctx.BeginPath()
+			ctx.RoundedRect(tx, ty, thumb, thumb, 5)
+			ctx.SetFillPaint(imgPaint)
+			ctx.Fill()
+
+			shadowPaint := nanovgo.BoxGradient(tx-1, ty, thumb+2, thumb+2, 5, 3, nanovgo.RGBA(0, 0, 0, 128), nanovgo.RGBA(0, 0, 0, 0))
+			ctx.BeginPath()
+			ctx.Rect(tx-5, ty-5, thumb+10, thumb+10)
+			ctx.RoundedRect(tx, ty, thumb, thumb, 6)
+			ctx.PathWinding(nanovgo.HOLE)
+			ctx.SetFillPaint(shadowPaint)
+			ctx.Fill()
+
+			ctx.BeginPath()
+			ctx.RoundedRect(tx+0.5, ty+0.5, thumb-1, thumb-1, 4-0.5)
+			ctx.SetStrokeWidth(1.0)
+			ctx.SetStrokeColor(nanovgo.RGBA(255, 255, 255, 192))
+			ctx.Stroke()
 		}
-
-		v := float32(i) * dv
-		a := clampF((u2-v)/dv, 0, 1)
-
-		if a < 1.0 {
-			drawSpinner(ctx, tx+thumb/2, ty+thumb/2, thumb*0.25, t)
-		}
-
-		imgPaint := nanovgo.ImagePattern(tx+ix, ty+iy, iw, ih, 0.0/180.0*nanovgo.PI, images[i], a)
-		ctx.BeginPath()
-		ctx.RoundedRect(tx, ty, thumb, thumb, 5)
-		ctx.SetFillPaint(imgPaint)
-		ctx.Fill()
-
-		shadowPaint := nanovgo.BoxGradient(tx-1, ty, thumb+2, thumb+2, 5, 3, nanovgo.RGBA(0, 0, 0, 128), nanovgo.RGBA(0, 0, 0, 0))
-		ctx.BeginPath()
-		ctx.Rect(tx-5, ty-5, thumb+10, thumb+10)
-		ctx.RoundedRect(tx, ty, thumb, thumb, 6)
-		ctx.PathWinding(nanovgo.HOLE)
-		ctx.SetFillPaint(shadowPaint)
-		ctx.Fill()
-
-		ctx.BeginPath()
-		ctx.RoundedRect(tx+0.5, ty+0.5, thumb-1, thumb-1, 4-0.5)
-		ctx.SetStrokeWidth(1.0)
-		ctx.SetStrokeColor(nanovgo.RGBA(255, 255, 255, 192))
-		ctx.Stroke()
-	}
-	ctx.Restore()
+	})
 
 	// Hide fades
 	fadePaint := nanovgo.LinearGradient(x, y, x, y+6, nanovgo.RGBA(200, 200, 200, 255), nanovgo.RGBA(200, 200, 200, 0))
@@ -639,8 +636,6 @@ func drawThumbnails(ctx *nanovgo.Context, x, y, w, h float32, images []int, t fl
 	ctx.SetFillPaint(shadowPaint)
 	//      ctx.FillColor(ctx.RGBA(0,0,0,128));
 	ctx.Fill()
-
-	ctx.Restore()
 }
 
 func drawColorWheel(ctx *nanovgo.Context, x, y, w, h, t float32) {
@@ -648,6 +643,7 @@ func drawColorWheel(ctx *nanovgo.Context, x, y, w, h, t float32) {
 	hue := sinF(t * 0.12)
 
 	ctx.Save()
+	defer ctx.Restore()
 	/*      ctx.BeginPath()
 	ctx.Rect(x,y,w,h)
 	ctx.FillColor(nanovgo.RGBA(255,0,0,128))
@@ -741,8 +737,6 @@ func drawColorWheel(ctx *nanovgo.Context, x, y, w, h, t float32) {
 	ctx.PathWinding(nanovgo.HOLE)
 	ctx.SetFillPaint(paint)
 	ctx.Fill()
-
-	ctx.Restore()
 }
 
 func drawLines(ctx *nanovgo.Context, x, y, w, h, t float32) {
@@ -752,6 +746,8 @@ func drawLines(ctx *nanovgo.Context, x, y, w, h, t float32) {
 	caps := []nanovgo.LineCap{nanovgo.BUTT, nanovgo.ROUND, nanovgo.SQUARE}
 
 	ctx.Save()
+	defer ctx.Restore()
+
 	pts := []float32{
 		-s*0.25 + cosF(t*0.3)*s*0.5,
 		sinF(t*0.3) * s * 0.5,
@@ -793,12 +789,12 @@ func drawLines(ctx *nanovgo.Context, x, y, w, h, t float32) {
 
 		}
 	}
-
-	ctx.Restore()
 }
 
 func drawWidths(ctx *nanovgo.Context, x, y, width float32) {
 	ctx.Save()
+	defer ctx.Restore()
+
 	ctx.SetStrokeColor(nanovgo.RGBA(0, 0, 0, 255))
 	for i := 0; i < 20; i++ {
 		w := (float32(i) + 0.5) * 0.1
@@ -809,7 +805,6 @@ func drawWidths(ctx *nanovgo.Context, x, y, width float32) {
 		ctx.Stroke()
 		y += 10
 	}
-	ctx.Restore()
 }
 
 func drawCaps(ctx *nanovgo.Context, x, y, width float32) {
@@ -817,6 +812,8 @@ func drawCaps(ctx *nanovgo.Context, x, y, width float32) {
 	var lineWidth float32 = 8.0
 
 	ctx.Save()
+	defer ctx.Restore()
+
 	ctx.BeginPath()
 	ctx.Rect(x-lineWidth/2, y, width+lineWidth, 40)
 	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 32))
@@ -837,5 +834,4 @@ func drawCaps(ctx *nanovgo.Context, x, y, width float32) {
 		ctx.LineTo(x+width, y+float32(i)*10+5)
 		ctx.Stroke()
 	}
-	ctx.Restore()
 }

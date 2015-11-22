@@ -215,6 +215,12 @@ func (c *Context) Restore() {
 	}
 }
 
+func (c *Context) Block(block func()) {
+	c.Save()
+	defer c.Restore()
+	block()
+}
+
 // Resets current render state to default values. Does not affect the render state stack.
 func (c *Context) Reset() {
 	c.getState().reset()

@@ -52,6 +52,8 @@ func renderDemo(ctx *nanovgo.Context, mx, my, width, height, t float32, data *De
 	//drawScissor(ctx, 50, height-80, t)
 
 	ctx.Save()
+	defer ctx.Restore()
+
 	if blowup {
 		ctx.Rotate(sinF(t*0.3) * 5.0 / 180.0 * nanovgo.PI)
 		ctx.Scale(2.0, 2.0)
@@ -61,8 +63,6 @@ func renderDemo(ctx *nanovgo.Context, mx, my, width, height, t float32, data *De
 	drawWindow(ctx, "Widgets `n Stuff", 50, 50, 300, 400)
 	var x float32 = 60.0
 	var y float32 = 95.0
-	drawButton(ctx, ICON_LOGIN, "Sign in", x+138, y, 140, 28, nanovgo.RGBA(0, 96, 128, 255))
-	y += 45
 	drawSearchBox(ctx, "Search", x, y, 280, 25)
 	y += 40
 	drawDropDown(ctx, "Effects", x, y, 280, 28)
@@ -92,8 +92,6 @@ func renderDemo(ctx *nanovgo.Context, mx, my, width, height, t float32, data *De
 
 	// Thumbnails box
 	drawThumbnails(ctx, 365, popy-30, 160, 300, data.images, t)
-
-	ctx.Restore()
 }
 
 func main() {
