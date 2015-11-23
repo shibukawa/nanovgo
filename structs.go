@@ -107,9 +107,13 @@ type nvgPathCache struct {
 }
 
 func (c *nvgPathCache) allocVertexes(n int) []nvgVertex {
-	offset := len(c.vertexes)
-	c.vertexes = append(c.vertexes, make([]nvgVertex, n)...)
-	return c.vertexes[offset:]
+	if n > len(c.vertexes) {
+		// Round up to prevent allocations when things change just slightly.
+		n := (n + 0xff) & ^0xff
+		c.vertexes = append(c.vertexes, make([]nvgVertex, n-len(c.vertexes))...)
+	}
+
+	return c.vertexes
 }
 
 func (c *nvgPathCache) clearPathCache() {
