@@ -115,6 +115,7 @@ func (c *nvgPathCache) allocVertexes(n int) []nvgVertex {
 func (c *nvgPathCache) clearPathCache() {
 	c.points = c.points[:0]
 	c.paths = c.paths[:0]
+	c.vertexes = c.vertexes[:0]
 }
 
 func (c *nvgPathCache) lastPath() *nvgPath {
