@@ -853,6 +853,11 @@ func (c *Context) FontFace() string {
 
 // Draws text string at specified location. If end is specified only the sub-string up to the end is drawn.
 func (c *Context) Text(x, y float32, str string) float32 {
+	return c.TextRune(x, y, []rune(str))
+}
+
+// Draws text string at specified location. If end is specified only the sub-string up to the end is drawn.
+func (c *Context) TextRune(x, y float32, runes []rune) float32 {
 	state := c.getState()
 	scale := state.getFontScale() * c.devicePxRatio
 	invScale := 1.0 / scale
@@ -865,8 +870,6 @@ func (c *Context) Text(x, y float32, str string) float32 {
 	c.fs.SetBlur(state.fontBlur * scale)
 	c.fs.SetAlign(fontstashmini.FONSAlign(state.textAlign))
 	c.fs.SetFont(state.fontId)
-
-	runes := []rune(str)
 
 	vertexCount := maxI(2, len(runes)) * 6 // conservative estimate.
 	vertexes := c.cache.allocVertexes(vertexCount)
@@ -946,7 +949,7 @@ func (c *Context) TextBox(x, y, breakRowWidth float32, str string) {
 	state.textAlign = oldAlign
 
 	for {
-		rows := c.textBreakLinesOfRunes(runes, breakRowWidth, 2)
+		rows := c.TextBreakLinesRuneN(runes, breakRowWidth, 2)
 		if rows == nil {
 			break
 		}
@@ -1000,12 +1003,84 @@ func (c *Context) TextBounds(x, y float32, str string) (float32, []float32) {
 // if the bounding box of the text should be returned. The bounds value are [xmin,ymin, xmax,ymax]
 // Measured values are returned in local coordinate space.
 func (c *Context) TextBoxBounds(x, y, breakRowWidth float32, str string) [4]float32 {
-	return [4]float32{}
+	state := c.getState()
+	if state.fontId == fontstashmini.INVALID {
+		return [4]float32{}
+	}
+	runes := []rune(str)
+	scale := state.getFontScale() * c.devicePxRatio
+	invScale := 1.0 / scale
+
+	oldAlign := state.textAlign
+
+	var hAlign Align
+	if state.textAlign&ALIGN_LEFT != 0 {
+		hAlign = ALIGN_LEFT
+	} else if state.textAlign&ALIGN_CENTER != 0 {
+		hAlign = ALIGN_CENTER
+	} else if state.textAlign&ALIGN_RIGHT != 0 {
+		hAlign = ALIGN_RIGHT
+	}
+	vAlign := state.textAlign & (ALIGN_TOP | ALIGN_MIDDLE | ALIGN_BOTTOM | ALIGN_BASELINE)
+	state.textAlign = ALIGN_LEFT | vAlign
+
+	minX := x
+	minY := y
+	maxX := x
+	maxY := y
+
+	_, _, lineH := c.TextMetrics()
+	/*c.fs.SetSize(state.fontSize * scale)
+	c.fs.SetSpacing(state.letterSpacing * scale)
+	c.fs.SetBlur(state.fontBlur * scale)
+	c.fs.SetAlign(fontstashmini.FONSAlign(state.textAlign))
+	c.fs.SetFont(state.fontId)*/
+
+	rMinY, rMaxY := c.fs.LineBounds(0)
+	rMinY *= invScale
+	rMaxY *= invScale
+
+	for {
+		rows := c.TextBreakLinesRuneN(runes, breakRowWidth, 2)
+		if rows == nil {
+			break
+		}
+		for i := range rows {
+			row := &rows[i]
+			var dx float32
+			// Horizontal bounds
+			switch hAlign {
+			case ALIGN_LEFT:
+				dx = 0
+			case ALIGN_CENTER:
+				dx = breakRowWidth*0.5 - row.Width*0.5
+			case ALIGN_RIGHT:
+				dx = breakRowWidth - row.Width
+			}
+			rMinX := x + row.MinX + dx
+			rMaxX := x + row.MaxX + dx
+			minX = minF(minX, rMinX)
+			maxX = maxF(maxX, rMaxX)
+			// Vertical bounds.
+			minY = minF(minY, y+rMinY)
+			maxY = maxF(maxY, y+rMaxY)
+			y += lineH * state.lineHeight
+		}
+		runes = runes[rows[len(rows)-1].NextIndex:]
+	}
+
+	state.textAlign = oldAlign
+
+	return [4]float32{minX, minY, maxX, maxY}
 }
 
 // Calculates the glyph x positions of the specified text. If end is specified only the sub-string will be used.
 // Measured values are returned in local coordinate space.
 func (c *Context) TextGlyphPositions(x, y float32, str string) []GlyphPosition {
+	return c.TextGlyphPositionsRune(x, y, []rune(str))
+}
+
+func (c *Context) TextGlyphPositionsRune(x, y float32, runes []rune) []GlyphPosition {
 	state := c.getState()
 	scale := state.getFontScale() * c.devicePxRatio
 	invScale := 1.0 / scale
@@ -1019,7 +1094,6 @@ func (c *Context) TextGlyphPositions(x, y float32, str string) []GlyphPosition {
 	c.fs.SetAlign(fontstashmini.FONSAlign(state.textAlign))
 	c.fs.SetFont(state.fontId)
 
-	runes := []rune(str)
 	positions := make([]GlyphPosition, 0, len(runes))
 
 	iter := c.fs.TextIterForRunes(x*scale, y*scale, runes)
@@ -1069,11 +1143,19 @@ func (c *Context) TextMetrics() (float32, float32, float32) {
 // Breaks the specified text into lines. If end is specified only the sub-string will be used.
 // White space is stripped at the beginning of the rows, the text is split at word boundaries or when new-line characters are encountered.
 // Words longer than the max width are slit at nearest character (i.e. no hyphenation).
-func (c *Context) TextBreakLines(str string, breakRowWidth float32, maxRows int) []TextRow {
-	return c.textBreakLinesOfRunes([]rune(str), breakRowWidth, maxRows)
+func (c *Context) TextBreakLines(str string, breakRowWidth float32) []TextRow {
+	return c.TextBreakLinesRuneN([]rune(str), breakRowWidth, -1)
 }
 
-func (c *Context) textBreakLinesOfRunes(runes []rune, breakRowWidth float32, maxRows int) []TextRow {
+func (c *Context) TextBreakLinesN(str string, breakRowWidth float32, maxRows int) []TextRow {
+	return c.TextBreakLinesRuneN([]rune(str), breakRowWidth, maxRows)
+}
+
+func (c *Context) TextBreakLinesRune(runes []rune, breakRowWidth float32) []TextRow {
+	return c.TextBreakLinesRuneN(runes, breakRowWidth, -1)
+}
+
+func (c *Context) TextBreakLinesRuneN(runes []rune, breakRowWidth float32, maxRows int) []TextRow {
 	state := c.getState()
 	scale := state.getFontScale() * c.devicePxRatio
 	invScale := 1.0 / scale
@@ -1095,7 +1177,10 @@ func (c *Context) textBreakLinesOfRunes(runes []rune, breakRowWidth float32, max
 	iter := c.fs.TextIterForRunes(0, 0, runes)
 	prevIter := iter
 	var prevCodePoint rune = 0
-	rows := make([]TextRow, 0, maxRows)
+	var rows []TextRow
+	if maxRows != -1 {
+		rows = make([]TextRow, maxRows)
+	}
 
 	var rowStartX, rowWidth, rowMinX, rowMaxX, wordStartX, wordMinX, breakWidth, breakMaxX float32
 	rowStart := -1
@@ -1157,7 +1242,7 @@ func (c *Context) textBreakLinesOfRunes(runes []rune, breakRowWidth float32, max
 				MaxX:       rowMaxX * invScale,
 				NextIndex:  iter.NextIndex,
 			})
-			if len(rows) >= maxRows {
+			if maxRows != -1 && len(rows) >= maxRows {
 				return rows
 			}
 			// Set null break point
@@ -1222,7 +1307,7 @@ func (c *Context) textBreakLinesOfRunes(runes []rune, breakRowWidth float32, max
 							MaxX:       rowMaxX * invScale,
 							NextIndex:  iter.CurrentIndex,
 						})
-						if len(rows) >= maxRows {
+						if maxRows != -1 && len(rows) >= maxRows {
 							return rows
 						}
 						rowStartX = iter.X
@@ -1245,7 +1330,7 @@ func (c *Context) textBreakLinesOfRunes(runes []rune, breakRowWidth float32, max
 							MaxX:       breakMaxX * invScale,
 							NextIndex:  wordStart,
 						})
-						if len(rows) >= maxRows {
+						if maxRows != -1 && len(rows) >= maxRows {
 							return rows
 						}
 						rowStartX = wordStartX

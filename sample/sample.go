@@ -36,7 +36,7 @@ func key(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods gl
 
 func renderDemo(ctx *nanovgo.Context, mx, my, width, height, t float32, data *DemoData) {
 	drawEyes(ctx, width-250, 50, 150, 100, mx, my, t)
-	//drawParagraph(ctx, width-450, 50, 150, 100, mx, my)
+	drawParagraph(ctx, width-450, 50, 150, 100, mx, my)
 	drawGraph(ctx, 0, height/2, width, height/2, t)
 	drawColorWheel(ctx, width-300, height-300, 250.0, 250.0, t)
 
@@ -49,7 +49,7 @@ func renderDemo(ctx *nanovgo.Context, mx, my, width, height, t float32, data *De
 	// Line caps
 	drawCaps(ctx, 10, 300, 30)
 
-	//drawScissor(ctx, 50, height-80, t)
+	drawScissor(ctx, 50, height-80, t)
 
 	ctx.Save()
 	defer ctx.Restore()

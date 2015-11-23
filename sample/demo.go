@@ -6,6 +6,7 @@ import (
 	"math"
 
 	"log"
+	"strconv"
 )
 
 type DemoData struct {
@@ -60,6 +61,19 @@ func clampF(a, min, max float32) float32 {
 	}
 	return a
 }
+func absF(a float32) float32 {
+	if a > 0.0 {
+		return a
+	}
+	return -a
+}
+func maxF(a, b float32) float32 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 func isBlack(col nanovgo.Color) bool {
 	return col.R == 0.0 && col.G == 0.0 && col.B == 0.0 && col.A == 0.0
 }
@@ -834,4 +848,162 @@ func drawCaps(ctx *nanovgo.Context, x, y, width float32) {
 		ctx.LineTo(x+width, y+float32(i)*10+5)
 		ctx.Stroke()
 	}
+}
+
+func drawParagraph(ctx *nanovgo.Context, x, y, width, height, mx, my float32) {
+	text := "This is longer chunk of text.\n  \n  Would have used lorem ipsum but she    was busy jumping over the lazy dog with the fox and all the men who came to the aid of the party."
+
+	ctx.Save()
+	defer ctx.Restore()
+
+	ctx.SetFontSize(10.0)
+	ctx.SetFontFace("sans")
+	ctx.SetTextAlign(nanovgo.ALIGN_LEFT | nanovgo.ALIGN_TOP)
+	_, _, lineh := ctx.TextMetrics()
+	// The text break API can be used to fill a large buffer of rows,
+	// or to iterate over the text just few lines (or just one) at a time.
+	// The "next" variable of the last returned item tells where to continue.
+	runes := []rune(text)
+
+	var gx, gy float32
+	var gutter int
+	lnum := 0
+
+	for _, row := range ctx.TextBreakLinesRune(runes, width) {
+		hit := mx > x && mx < (x+width) && my >= y && my < (y+lineh)
+
+		ctx.BeginPath()
+		var alpha uint8
+		if hit {
+			alpha = 64
+		} else {
+			alpha = 16
+		}
+		ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, alpha))
+		ctx.Rect(x, y, row.Width, lineh)
+		ctx.Fill()
+
+		ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 255))
+		ctx.TextRune(x, y, runes[row.StartIndex:])
+
+		if hit {
+			var caretX float32
+			if mx < x+row.Width/2 {
+				caretX = x
+			} else {
+				caretX = x + row.Width
+			}
+			px := x
+			lineRune := runes[row.StartIndex:row.EndIndex]
+			glyphs := ctx.TextGlyphPositionsRune(x, y, lineRune)
+			for j, glyph := range glyphs {
+				x0 := glyph.X
+				var x1 float32
+				if j+1 < len(glyphs) {
+					x1 = glyphs[j+1].X
+				} else {
+					x1 = x + row.Width
+				}
+				gx = x0*0.3 + x1*0.7
+				if mx >= px && mx < gx {
+					caretX = glyph.X
+				}
+				px = gx
+			}
+			ctx.BeginPath()
+			ctx.SetFillColor(nanovgo.RGBA(255, 192, 0, 255))
+			ctx.Rect(caretX, y, 1, lineh)
+			ctx.Fill()
+
+			gutter = lnum + 1
+			gx = x - 10
+			gy = y + lineh/2
+		}
+		lnum++
+		y += lineh
+	}
+
+	if gutter > 0 {
+		txt := strconv.Itoa(gutter)
+
+		ctx.SetFontSize(13.0)
+		ctx.SetTextAlign(nanovgo.ALIGN_RIGHT | nanovgo.ALIGN_MIDDLE)
+
+		_, bounds := ctx.TextBounds(gx, gy, txt)
+
+		ctx.BeginPath()
+		ctx.SetFillColor(nanovgo.RGBA(255, 192, 0, 255))
+		ctx.RoundedRect(
+			float32(int(bounds[0]-4)),
+			float32(int(bounds[1]-2)),
+			float32(int(bounds[2]-bounds[0])+8),
+			float32(int(bounds[3]-bounds[1])+4),
+			float32(int(bounds[3]-bounds[1])+4)/2.0-1.0)
+		ctx.Fill()
+
+		ctx.SetFillColor(nanovgo.RGBA(32, 32, 32, 255))
+		ctx.Text(gx, gy, txt)
+	}
+
+	y += 20.0
+
+	ctx.SetFontSize(13.0)
+	ctx.SetTextAlign(nanovgo.ALIGN_LEFT | nanovgo.ALIGN_TOP)
+	ctx.SetTextLineHeight(1.2)
+
+	bounds := ctx.TextBoxBounds(x, y, 150, "Hover your mouse over the text to see calculated caret position.")
+
+	// Fade the tooltip out when close to it.
+	gx = absF((mx - (bounds[0]+bounds[2])*0.5) / (bounds[0] - bounds[2]))
+	gy = absF((my - (bounds[1]+bounds[3])*0.5) / (bounds[1] - bounds[3]))
+	a := maxF(gx, gy) - 0.5
+	a = clampF(a, 0, 1)
+	ctx.SetGlobalAlpha(a)
+
+	ctx.BeginPath()
+	ctx.SetFillColor(nanovgo.RGBA(220, 220, 220, 255))
+	ctx.RoundedRect(bounds[0]-2, bounds[1]-2, float32(int(bounds[2]-bounds[0])+4), float32(int(bounds[3]-bounds[1])+4), 3)
+	px := float32(int((bounds[2] + bounds[0]) / 2))
+	ctx.MoveTo(px, bounds[1]-10)
+	ctx.LineTo(px+7, bounds[1]+1)
+	ctx.LineTo(px-7, bounds[1]+1)
+	ctx.Fill()
+
+	ctx.SetFillColor(nanovgo.RGBA(0, 0, 0, 220))
+	ctx.TextBox(x, y, 150, "Hover your mouse over the text to see calculated caret position.")
+}
+
+func drawScissor(ctx *nanovgo.Context, x, y, t float32) {
+	ctx.Save()
+
+	// Draw first rect and set scissor to it's area.
+	ctx.Translate(x, y)
+	ctx.Rotate(nanovgo.DegToRad(5))
+	ctx.BeginPath()
+	ctx.Rect(-20, -20, 60, 40)
+	ctx.SetFillColor(nanovgo.RGBA(255, 0, 0, 255))
+	ctx.Fill()
+	ctx.Scissor(-20, -20, 60, 40)
+
+	// Draw second rectangle with offset and rotation.
+	ctx.Translate(40, 0)
+	ctx.Rotate(t)
+
+	// Draw the intended second rectangle without any scissoring.
+	ctx.Save()
+	ctx.ResetScissor()
+	ctx.BeginPath()
+	ctx.Rect(-20, -10, 60, 30)
+	ctx.SetFillColor(nanovgo.RGBA(255, 128, 0, 64))
+	ctx.Fill()
+	ctx.Restore()
+
+	// Draw second rectangle with combined scissoring.
+	ctx.IntersectScissor(-20, -10, 60, 30)
+	ctx.BeginPath()
+	ctx.Rect(-20, -10, 60, 30)
+	ctx.SetFillColor(nanovgo.RGBA(255, 128, 0, 255))
+	ctx.Fill()
+
+	ctx.Restore()
 }
