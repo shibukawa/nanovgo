@@ -270,7 +270,7 @@ func drawCheckBox(ctx *nanovgo.Context, text string, x, y, w, h float32) {
 
 func drawButton(ctx *nanovgo.Context, preicon int, text string, x, y, w, h float32, col nanovgo.Color) {
 	var cornerRadius float32 = 4.0
-	var iw, tw float32
+	var iw float32
 
 	var alpha uint8
 	if isBlack(col) {
@@ -295,17 +295,13 @@ func drawButton(ctx *nanovgo.Context, preicon int, text string, x, y, w, h float
 
 	ctx.SetFontSize(20.0)
 	ctx.SetFontFace("sans-bold")
-	tw, _ = ctx.TextBounds(0, 0, text)
+	tw, _ := ctx.TextBounds(0, 0, text)
 	if preicon != 0 {
 		ctx.SetFontSize(h * 1.3)
 		ctx.SetFontFace("icons")
 		iw, _ = ctx.TextBounds(0, 0, cpToUTF8(preicon))
 		iw += h * 0.15
-	}
 
-	if preicon != 0 {
-		ctx.SetFontSize(h * 1.3)
-		ctx.SetFontFace("icons")
 		ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 96))
 		ctx.SetTextAlign(nanovgo.ALIGN_LEFT | nanovgo.ALIGN_MIDDLE)
 		ctx.Text(x+w*0.5-tw*0.5-iw*0.75, y+h*0.5, cpToUTF8(preicon))

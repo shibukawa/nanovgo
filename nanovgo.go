@@ -997,7 +997,7 @@ func (c *Context) TextBounds(x, y float32, str string) (float32, []float32) {
 		bounds[2] *= invScale
 		bounds[3] *= invScale
 	}
-	return width, bounds
+	return width * invScale, bounds
 }
 
 // Measures the specified multi-text string. Parameter bounds should be a pointer to float[4],
