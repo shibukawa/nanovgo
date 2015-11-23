@@ -375,7 +375,7 @@ func (c *glContext) stroke(call *glCall) {
 func (c *glContext) triangles(call *glCall) {
 	c.setUniforms(call.uniformOffset, call.image)
 	checkError(c, "triangles fill")
-	gl.DrawArrays(gl.TRIANGLE_STRIP, call.triangleOffset, call.triangleCount)
+	gl.DrawArrays(gl.TRIANGLES, call.triangleOffset, call.triangleCount)
 }
 
 type glParams struct {
@@ -774,19 +774,19 @@ func (p *glParams) renderStroke(paint *Paint, scissor *nvgScissor, fringe float3
 func (p *glParams) renderTriangles(paint *Paint, scissor *nvgScissor, vertexes []nvgVertex) {
 	c := p.context
 
-	triangleCount := len(vertexes)
-	vertexOffset := c.allocVertexMemory(triangleCount)
+	vertexCount := len(vertexes)
+	vertexOffset := c.allocVertexMemory(vertexCount)
 	callIndex := len(c.calls)
 
 	c.calls = append(c.calls, glCall{
 		callType:       glnvg_TRIANGLES,
 		image:          paint.image,
 		triangleOffset: vertexOffset / 4,
-		triangleCount:  triangleCount,
+		triangleCount:  vertexCount,
 	})
 	call := &c.calls[callIndex]
 
-	for i := 0; i < triangleCount; i++ {
+	for i := 0; i < vertexCount; i++ {
 		vertex := &vertexes[i]
 		c.vertexes[vertexOffset] = vertex.x
 		c.vertexes[vertexOffset+1] = vertex.y

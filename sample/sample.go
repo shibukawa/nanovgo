@@ -111,7 +111,8 @@ func main() {
 	window.SetKeyCallback(key)
 	window.MakeContextCurrent()
 
-	ctx, err := nanovgo.NewContext( /*nanovgo.ANTIALIAS | */ nanovgo.STENCIL_STROKES | nanovgo.DEBUG)
+	//ctx, err := nanovgo.NewContext( nanovgo.ANTIALIAS | nanovgo.STENCIL_STROKES | nanovgo.DEBUG)
+	ctx, err := nanovgo.NewContext(nanovgo.STENCIL_STROKES)
 	defer ctx.Delete()
 
 	if err != nil {

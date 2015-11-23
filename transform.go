@@ -86,7 +86,7 @@ func (t TransformMatrix) Inverse() TransformMatrix {
 }
 
 // Transform a point by given transform.
-func (t TransformMatrix) Point(sx, sy float32) (dx, dy float32) {
+func (t TransformMatrix) TransformPoint(sx, sy float32) (dx, dy float32) {
 	dx = sx*t[0] + sy*t[2] + t[4]
 	dy = sx*t[1] + sy*t[3] + t[5]
 	return

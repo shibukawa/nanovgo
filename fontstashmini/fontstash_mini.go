@@ -284,7 +284,7 @@ func (stash *FontStash) TextBoundsOfRunes(x, y float32, runes []rune) (float32, 
 	for _, codePoint := range runes {
 		glyph := stash.getGlyph(font, codePoint, size, blur)
 		if glyph != nil {
-			var quad *Quad
+			var quad Quad
 			quad, x, y = stash.getQuad(font, prevGlyphIndex, glyph, scale, state.spacing, x, y)
 			if quad.X0 < minX {
 				minX = quad.X0
@@ -360,10 +360,10 @@ func (stash *FontStash) TextIterForRunes(x, y float32, runes []rune) *TextIterat
 	return iter
 }
 
-func (iter *TextIterator) Next() (quad *Quad) {
+func (iter *TextIterator) Next() (quad Quad, ok bool) {
 	iter.CurrentIndex = iter.NextIndex
 	if iter.CurrentIndex == iter.End {
-		return nil
+		return Quad{}, false
 	}
 	current := iter.NextIndex
 	stash := iter.stash
@@ -383,7 +383,7 @@ func (iter *TextIterator) Next() (quad *Quad) {
 	}
 	iter.PrevGlyph = glyph
 	iter.NextIndex = current
-	return quad
+	return quad, true
 }
 
 func (stash *FontStash) flush() {
@@ -496,7 +496,7 @@ func (stash *FontStash) getGlyph(font *Font, codePoint rune, size, blur int) *Gl
 	return glyph
 }
 
-func (stash *FontStash) getQuad(font *Font, prevGlyphIndex int, glyph *Glyph, scale, spacing float32, originalX, originalY float32) (quad *Quad, x, y float32) {
+func (stash *FontStash) getQuad(font *Font, prevGlyphIndex int, glyph *Glyph, scale, spacing float32, originalX, originalY float32) (quad Quad, x, y float32) {
 	x = originalX
 	y = originalY
 	if prevGlyphIndex != -1 {
@@ -513,7 +513,7 @@ func (stash *FontStash) getQuad(font *Font, prevGlyphIndex int, glyph *Glyph, sc
 	rx := float32(int(x + xOff))
 	ry := float32(int(y + yOff))
 
-	quad = &Quad{
+	quad = Quad{
 		X0: rx,
 		Y0: ry,
 		X1: rx + x1 - x0,

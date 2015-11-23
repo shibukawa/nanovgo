@@ -879,8 +879,8 @@ func (c *Context) TextRune(x, y float32, runes []rune) float32 {
 	index := 0
 
 	for {
-		quad := iter.Next()
-		if quad == nil {
+		quad, ok := iter.Next()
+		if !ok {
 			break
 		}
 		if iter.PrevGlyph.Index == -1 {
@@ -892,7 +892,7 @@ func (c *Context) TextRune(x, y float32, runes []rune) float32 {
 				index = 0
 			}
 			iter = prevIter
-			quad = iter.Next() // try again
+			quad, _ = iter.Next() // try again
 			if iter.PrevGlyph.Index == -1 {
 				// still can not find glyph?
 				break
@@ -900,10 +900,11 @@ func (c *Context) TextRune(x, y float32, runes []rune) float32 {
 		}
 		prevIter = iter
 		// Transform corners.
-		c0, c1 := state.xform.Point(quad.X0*invScale, quad.Y0*invScale)
-		c2, c3 := state.xform.Point(quad.X1*invScale, quad.Y0*invScale)
-		c4, c5 := state.xform.Point(quad.X1*invScale, quad.Y1*invScale)
-		c6, c7 := state.xform.Point(quad.X0*invScale, quad.Y1*invScale)
+		c0, c1 := state.xform.TransformPoint(quad.X0*invScale, quad.Y0*invScale)
+		c2, c3 := state.xform.TransformPoint(quad.X1*invScale, quad.Y0*invScale)
+		c4, c5 := state.xform.TransformPoint(quad.X1*invScale, quad.Y1*invScale)
+		c6, c7 := state.xform.TransformPoint(quad.X0*invScale, quad.Y1*invScale)
+		//log.Printf("quad(%c) x0=%d, x1=%d, y0=%d, y1=%d, s0=%d, s1=%d, t0=%d, t1=%d\n", iter.CodePoint, int(quad.X0), int(quad.X1), int(quad.Y0), int(quad.Y1), int(1024*quad.S0), int(quad.S1*1024), int(quad.T0*1024), int(quad.T1*1024))
 		// Create triangles
 		if index+6 <= vertexCount {
 			(&vertexes[index]).set(c0, c1, quad.S0, quad.T0)
@@ -1100,13 +1101,13 @@ func (c *Context) TextGlyphPositionsRune(x, y float32, runes []rune) []GlyphPosi
 	prevIter := iter
 
 	for {
-		quad := iter.Next()
-		if quad == nil {
+		quad, ok := iter.Next()
+		if !ok {
 			break
 		}
 		if iter.PrevGlyph.Index == -1 && !c.allocTextAtlas() {
 			iter = prevIter
-			quad = iter.Next() // try again
+			quad, _ = iter.Next() // try again
 		}
 		prevIter = iter
 		positions = append(positions, GlyphPosition{
@@ -1189,13 +1190,13 @@ func (c *Context) TextBreakLinesRuneN(runes []rune, breakRowWidth float32, maxRo
 	breakEnd := -1
 
 	for {
-		quad := iter.Next()
-		if quad == nil {
+		quad, ok := iter.Next()
+		if !ok {
 			break
 		}
 		if iter.PrevGlyph.Index == -1 && !c.allocTextAtlas() {
 			iter = prevIter
-			quad = iter.Next() // try again
+			quad, _ = iter.Next() // try again
 		}
 		prevIter = iter
 		switch iter.CodePoint {
@@ -1414,15 +1415,15 @@ func (c *Context) appendCommand(vals []float32) {
 	for i < len(vals) {
 		switch nvgCommands(vals[i]) {
 		case nvg_MOVETO:
-			vals[i+1], vals[i+2] = xForm.Point(vals[i+1], vals[i+2])
+			vals[i+1], vals[i+2] = xForm.TransformPoint(vals[i+1], vals[i+2])
 			i += 3
 		case nvg_LINETO:
-			vals[i+1], vals[i+2] = xForm.Point(vals[i+1], vals[i+2])
+			vals[i+1], vals[i+2] = xForm.TransformPoint(vals[i+1], vals[i+2])
 			i += 3
 		case nvg_BEZIERTO:
-			vals[i+1], vals[i+2] = xForm.Point(vals[i+1], vals[i+2])
-			vals[i+3], vals[i+4] = xForm.Point(vals[i+3], vals[i+4])
-			vals[i+5], vals[i+6] = xForm.Point(vals[i+5], vals[i+6])
+			vals[i+1], vals[i+2] = xForm.TransformPoint(vals[i+1], vals[i+2])
+			vals[i+3], vals[i+4] = xForm.TransformPoint(vals[i+3], vals[i+4])
+			vals[i+5], vals[i+6] = xForm.TransformPoint(vals[i+5], vals[i+6])
 			i += 7
 		case nvg_CLOSE:
 			i++
