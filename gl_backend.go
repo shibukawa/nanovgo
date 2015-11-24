@@ -208,7 +208,7 @@ func (c *glContext) convertPaint(frag *glFragUniforms, paint *Paint, scissor *nv
 	frag.setOuterColor(paint.outerColor.PreMultiply())
 
 	if scissor.extent[0] < -0.5 || scissor.extent[1] < -0.5 {
-		frag.setScissorMat([]float32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+		frag.clearScissorMat()
 		frag.setScissorExt(1.0, 1.0)
 		frag.setScissorScale(1.0, 1.0)
 	} else {

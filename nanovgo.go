@@ -949,25 +949,17 @@ func (c *Context) TextBox(x, y, breakRowWidth float32, str string) {
 
 	state.textAlign = oldAlign
 
-	for {
-		rows := c.TextBreakLinesRuneN(runes, breakRowWidth, 2)
-		if rows == nil {
-			break
+	for _, row := range c.TextBreakLinesRune(runes, breakRowWidth) {
+		text := string(runes[row.StartIndex:row.EndIndex])
+		switch hAlign {
+		case ALIGN_LEFT:
+			c.Text(x, y, text)
+		case ALIGN_CENTER:
+			c.Text(x+breakRowWidth*0.5-row.Width*0.5, y, text)
+		case ALIGN_RIGHT:
+			c.Text(x+breakRowWidth-row.Width, y, text)
 		}
-		for i := range rows {
-			row := &rows[i]
-			text := string(runes[row.StartIndex:row.EndIndex])
-			switch hAlign {
-			case ALIGN_LEFT:
-				c.Text(x, y, text)
-			case ALIGN_CENTER:
-				c.Text(x+breakRowWidth*0.5-row.Width*0.5, y, text)
-			case ALIGN_RIGHT:
-				c.Text(x+breakRowWidth-row.Width, y, text)
-			}
-			y += lineH * state.lineHeight
-		}
-		runes = runes[rows[len(rows)-1].NextIndex:]
+		y += lineH * state.lineHeight
 	}
 }
 
@@ -1041,33 +1033,25 @@ func (c *Context) TextBoxBounds(x, y, breakRowWidth float32, str string) [4]floa
 	rMinY *= invScale
 	rMaxY *= invScale
 
-	for {
-		rows := c.TextBreakLinesRuneN(runes, breakRowWidth, 2)
-		if rows == nil {
-			break
+	for _, row := range c.TextBreakLinesRune(runes, breakRowWidth) {
+		var dx float32
+		// Horizontal bounds
+		switch hAlign {
+		case ALIGN_LEFT:
+			dx = 0
+		case ALIGN_CENTER:
+			dx = breakRowWidth*0.5 - row.Width*0.5
+		case ALIGN_RIGHT:
+			dx = breakRowWidth - row.Width
 		}
-		for i := range rows {
-			row := &rows[i]
-			var dx float32
-			// Horizontal bounds
-			switch hAlign {
-			case ALIGN_LEFT:
-				dx = 0
-			case ALIGN_CENTER:
-				dx = breakRowWidth*0.5 - row.Width*0.5
-			case ALIGN_RIGHT:
-				dx = breakRowWidth - row.Width
-			}
-			rMinX := x + row.MinX + dx
-			rMaxX := x + row.MaxX + dx
-			minX = minF(minX, rMinX)
-			maxX = maxF(maxX, rMaxX)
-			// Vertical bounds.
-			minY = minF(minY, y+rMinY)
-			maxY = maxF(maxY, y+rMaxY)
-			y += lineH * state.lineHeight
-		}
-		runes = runes[rows[len(rows)-1].NextIndex:]
+		rMinX := x + row.MinX + dx
+		rMaxX := x + row.MaxX + dx
+		minX = minF(minX, rMinX)
+		maxX = maxF(maxX, rMaxX)
+		// Vertical bounds.
+		minY = minF(minY, y+rMinY)
+		maxY = maxF(maxY, y+rMaxY)
+		y += lineH * state.lineHeight
 	}
 
 	state.textAlign = oldAlign
@@ -1145,18 +1129,10 @@ func (c *Context) TextMetrics() (float32, float32, float32) {
 // White space is stripped at the beginning of the rows, the text is split at word boundaries or when new-line characters are encountered.
 // Words longer than the max width are slit at nearest character (i.e. no hyphenation).
 func (c *Context) TextBreakLines(str string, breakRowWidth float32) []TextRow {
-	return c.TextBreakLinesRuneN([]rune(str), breakRowWidth, -1)
-}
-
-func (c *Context) TextBreakLinesN(str string, breakRowWidth float32, maxRows int) []TextRow {
-	return c.TextBreakLinesRuneN([]rune(str), breakRowWidth, maxRows)
+	return c.TextBreakLinesRune([]rune(str), breakRowWidth)
 }
 
 func (c *Context) TextBreakLinesRune(runes []rune, breakRowWidth float32) []TextRow {
-	return c.TextBreakLinesRuneN(runes, breakRowWidth, -1)
-}
-
-func (c *Context) TextBreakLinesRuneN(runes []rune, breakRowWidth float32, maxRows int) []TextRow {
 	state := c.getState()
 	scale := state.getFontScale() * c.devicePxRatio
 	invScale := 1.0 / scale
@@ -1179,9 +1155,6 @@ func (c *Context) TextBreakLinesRuneN(runes []rune, breakRowWidth float32, maxRo
 	prevIter := iter
 	var prevCodePoint rune = 0
 	var rows []TextRow
-	if maxRows != -1 {
-		rows = make([]TextRow, maxRows)
-	}
 
 	var rowStartX, rowWidth, rowMinX, rowMaxX, wordStartX, wordMinX, breakWidth, breakMaxX float32
 	rowStart := -1
@@ -1243,9 +1216,6 @@ func (c *Context) TextBreakLinesRuneN(runes []rune, breakRowWidth float32, maxRo
 				MaxX:       rowMaxX * invScale,
 				NextIndex:  iter.NextIndex,
 			})
-			if maxRows != -1 && len(rows) >= maxRows {
-				return rows
-			}
 			// Set null break point
 			breakEnd = rowStart
 			breakWidth = 0.0
@@ -1308,9 +1278,6 @@ func (c *Context) TextBreakLinesRuneN(runes []rune, breakRowWidth float32, maxRo
 							MaxX:       rowMaxX * invScale,
 							NextIndex:  iter.CurrentIndex,
 						})
-						if maxRows != -1 && len(rows) >= maxRows {
-							return rows
-						}
 						rowStartX = iter.X
 						rowStart = iter.CurrentIndex
 						rowEnd = iter.NextIndex
@@ -1331,9 +1298,6 @@ func (c *Context) TextBreakLinesRuneN(runes []rune, breakRowWidth float32, maxRo
 							MaxX:       breakMaxX * invScale,
 							NextIndex:  wordStart,
 						})
-						if maxRows != -1 && len(rows) >= maxRows {
-							return rows
-						}
 						rowStartX = wordStartX
 						rowStart = wordStart
 						rowEnd = iter.NextIndex
@@ -1364,7 +1328,7 @@ func (c *Context) TextBreakLinesRuneN(runes []rune, breakRowWidth float32, maxRo
 			NextIndex:  len(runes),
 		})
 	}
-	return nil
+	return rows
 }
 
 func createInternal(params nvgParams) (*Context, error) {

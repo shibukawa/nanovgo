@@ -852,7 +852,7 @@ func drawParagraph(ctx *nanovgo.Context, x, y, width, height, mx, my float32) {
 	ctx.Save()
 	defer ctx.Restore()
 
-	ctx.SetFontSize(10.0)
+	ctx.SetFontSize(18.0)
 	ctx.SetFontFace("sans")
 	ctx.SetTextAlign(nanovgo.ALIGN_LEFT | nanovgo.ALIGN_TOP)
 	_, _, lineh := ctx.TextMetrics()
@@ -880,7 +880,7 @@ func drawParagraph(ctx *nanovgo.Context, x, y, width, height, mx, my float32) {
 		ctx.Fill()
 
 		ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 255))
-		ctx.TextRune(x, y, runes[row.StartIndex:])
+		ctx.TextRune(x, y, runes[row.StartIndex:row.EndIndex])
 
 		if hit {
 			var caretX float32

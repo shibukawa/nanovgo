@@ -50,6 +50,12 @@ func (u *glFragUniforms) setScissorMat(mat []float32) {
 	copy(u[0:12], mat[0:12])
 }
 
+func (u *glFragUniforms) clearScissorMat() {
+	for i := 0; i < 12; i++ {
+		u[i] = 0
+	}
+}
+
 func (u *glFragUniforms) setPaintMat(mat []float32) {
 	copy(u[12:24], mat[0:12])
 }
