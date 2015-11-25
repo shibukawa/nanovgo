@@ -98,29 +98,22 @@ func main() {
 func LoadDemo(ctx *nanovgo.Context) *demo.DemoData {
 	d := &demo.DemoData{}
 	for i := 0; i < 12; i++ {
-		path := fmt.Sprintf("images/image%d.jpg", i+1)
-		data, err := readFile(path)
-		if err != nil {
-			log.Fatalln("Could not load %s: %v", path, err)
-		}
-		d.Images = append(d.Images, ctx.CreateImageFromMemory(0, data))
+		path := fmt.Sprintf("assets/image%d.jpg", i+1)
+		d.Images = append(d.Images, ctx.CreateImageFromMemory(0, demo.MustAsset(path)))
 		if d.Images[i] == 0 {
 			log.Fatalf("Could not load %s", path)
 		}
 	}
 
-	data, _ := readFile("entypo.ttf")
-	d.FontIcons = ctx.CreateFontFromMemory("icons", data, 0)
+	d.FontIcons = ctx.CreateFontFromMemory("icons", demo.MustAsset("assets/entypo.ttf"), 0)
 	if d.FontIcons == -1 {
 		log.Fatalln("Could not add font icons.")
 	}
-	data, _ = readFile("Roboto-Regular.ttf")
-	d.FontNormal = ctx.CreateFontFromMemory("sans", data, 0)
+	d.FontNormal = ctx.CreateFontFromMemory("sans", demo.MustAsset("assets/Roboto-Regular.ttf"), 0)
 	if d.FontNormal == -1 {
 		log.Fatalln("Could not add font italic.")
 	}
-	data, _ = readFile("Roboto-Bold.ttf")
-	d.FontBold = ctx.CreateFontFromMemory("sans-bold", data, 0)
+	d.FontBold = ctx.CreateFontFromMemory("sans-bold", demo.MustAsset("assets/Roboto-Bold.ttf"), 0)
 	if d.FontBold == -1 {
 		log.Fatalln("Could not add font bold.")
 	}
@@ -128,10 +121,11 @@ func LoadDemo(ctx *nanovgo.Context) *demo.DemoData {
 }
 
 func readFile(path string) ([]byte, error) {
-	resp, err := http.Get("http://shibukawa.github.io/nanovgo/" + path)
+	resp, err := http.Get("/nanovgo/" + path)
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("/nanovgo/" + path + ": " + resp.Status)
 	defer resp.Body.Close()
 	return ioutil.ReadAll(resp.Body)
 }
