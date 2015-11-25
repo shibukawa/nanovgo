@@ -1,4 +1,4 @@
-// +build !js
+// +build js
 
 package main
 
@@ -10,6 +10,8 @@ import (
 	"github.com/shibukawa/nanovgo/perfgraph"
 	"github.com/shibukawa/nanovgo/sample/demo"
 	"log"
+	"net/http"
+	"io/ioutil"
 )
 
 var blowup bool
@@ -35,7 +37,7 @@ func main() {
 	// demo MSAA
 	glfw.WindowHint(glfw.Samples, 4)
 
-	window, err := glfw.CreateWindow(1000, 600, "NanoVGo", nil, nil)
+	window, err := glfw.CreateWindow(1000*0.9, 600*0.9, "NanoVGo", nil, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -78,6 +80,7 @@ func main() {
 		gl.Disable(gl.DEPTH_TEST)
 
 		ctx.BeginFrame(winWidth, winHeight, pixelRatio)
+		ctx.Scale(0.9, 0.9) // github.com's README area has small width
 
 		demo.RenderDemo(ctx, float32(mx), float32(my), float32(winWidth), float32(winHeight), t, blowup, demoData)
 		fps.RenderGraph(ctx, 5, 5)
@@ -96,23 +99,39 @@ func LoadDemo(ctx *nanovgo.Context) *demo.DemoData {
 	d := &demo.DemoData{}
 	for i := 0; i < 12; i++ {
 		path := fmt.Sprintf("images/image%d.jpg", i+1)
-		d.Images = append(d.Images, ctx.CreateImage(path, 0))
+		data, err := readFile(path)
+		if err != nil {
+			log.Fatalln("Could not load %s: %v", path, err)
+		}
+		d.Images = append(d.Images, ctx.CreateImageFromMemory(0, data))
 		if d.Images[i] == 0 {
 			log.Fatalf("Could not load %s", path)
 		}
 	}
 
-	d.FontIcons = ctx.CreateFont("icons", "entypo.ttf")
+	data, _ := readFile("entypo.ttf")
+	d.FontIcons = ctx.CreateFontFromMemory("icons", data, 0)
 	if d.FontIcons == -1 {
 		log.Fatalln("Could not add font icons.")
 	}
-	d.FontNormal = ctx.CreateFont("sans", "Roboto-Regular.ttf")
+	data, _ = readFile("Roboto-Regular.ttf")
+	d.FontNormal = ctx.CreateFontFromMemory("sans", data, 0)
 	if d.FontNormal == -1 {
 		log.Fatalln("Could not add font italic.")
 	}
-	d.FontBold = ctx.CreateFont("sans-bold", "Roboto-Bold.ttf")
+	data, _ = readFile("Roboto-Bold.ttf")
+	d.FontBold = ctx.CreateFontFromMemory("sans-bold", data, 0)
 	if d.FontBold == -1 {
 		log.Fatalln("Could not add font bold.")
 	}
 	return d
+}
+
+func readFile(path string) ([]byte, error) {
+	resp, err := http.Get("http://shibukawa.github.io/nanovgo/" + path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	return ioutil.ReadAll(resp.Body)
 }

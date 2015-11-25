@@ -1,47 +1,90 @@
-package main
+package demo
 
 import (
-	"fmt"
 	"github.com/shibukawa/nanovgo"
 	"math"
-
-	"log"
 	"strconv"
+)
+
+const (
+	IconSEARCH       = 0x1F50D
+	IconCIRCLEDCROSS = 0x2716
+	IconCHEVRONRIGHT = 0xE75E
+	IconCHECK        = 0x2713
+	IconLOGIN        = 0xE740
+	IconTRASH        = 0xE729
 )
 
 // DemoData keeps font and image handlers
 type DemoData struct {
-	fontNormal, fontBold, fontIcons int
-	images                          []int
+	FontNormal, FontBold, FontIcons int
+	Images                          []int
 }
 
-func (d *DemoData) loadData(ctx *nanovgo.Context) {
-	for i := 0; i < 12; i++ {
-		path := fmt.Sprintf("images/image%d.jpg", i+1)
-		d.images = append(d.images, ctx.CreateImage(path, 0))
-		if d.images[i] == 0 {
-			log.Fatalf("Could not load %s", path)
-		}
-	}
-
-	d.fontIcons = ctx.CreateFont("icons", "entypo.ttf")
-	if d.fontIcons == -1 {
-		log.Fatalln("Could not add font icons.")
-	}
-	d.fontNormal = ctx.CreateFont("sans", "Roboto-Regular.ttf")
-	if d.fontNormal == -1 {
-		log.Fatalln("Could not add font italic.")
-	}
-	d.fontBold = ctx.CreateFont("sans-bold", "Roboto-Bold.ttf")
-	if d.fontBold == -1 {
-		log.Fatalln("Could not add font bold.")
-	}
-}
-
-func (d *DemoData) freeData(ctx *nanovgo.Context) {
-	for _, img := range d.images {
+func (d *DemoData) FreeData(ctx *nanovgo.Context) {
+	for _, img := range d.Images {
 		ctx.DeleteImage(img)
 	}
+}
+
+func RenderDemo(ctx *nanovgo.Context, mx, my, width, height, t float32, blowup bool, data *DemoData) {
+	drawEyes(ctx, width-250, 50, 150, 100, mx, my, t)
+	drawParagraph(ctx, width-450, 50, 150, 100, mx, my)
+	drawGraph(ctx, 0, height/2, width, height/2, t)
+	drawColorWheel(ctx, width-300, height-300, 250.0, 250.0, t)
+
+	// Line joints
+	drawLines(ctx, 120, height-50, 600, 50, t)
+
+	// Line widths
+	drawWidths(ctx, 10, 50, 30)
+
+	// Line caps
+	drawCaps(ctx, 10, 300, 30)
+
+	drawScissor(ctx, 50, height-80, t)
+
+	ctx.Save()
+	defer ctx.Restore()
+
+	if blowup {
+		ctx.Rotate(sinF(t*0.3) * 5.0 / 180.0 * nanovgo.PI)
+		ctx.Scale(2.0, 2.0)
+	}
+
+	// Widgets
+	drawWindow(ctx, "Widgets `n Stuff", 50, 50, 300, 400)
+	var x float32 = 60.0
+	var y float32 = 95.0
+	drawSearchBox(ctx, "Search", x, y, 280, 25)
+	y += 40
+	drawDropDown(ctx, "Effects", x, y, 280, 28)
+	popy := y + 14
+	y += 45
+
+	// Form
+	drawLabel(ctx, "Login", x, y, 280, 20)
+	y += 25
+	drawEditBox(ctx, "Email", x, y, 280, 28)
+	y += 35
+	drawEditBox(ctx, "Password", x, y, 280, 28)
+	y += 38
+	drawCheckBox(ctx, "Remember me", x, y, 140, 28)
+	drawButton(ctx, IconLOGIN, "Sign in", x+138, y, 140, 28, nanovgo.RGBA(0, 96, 128, 255))
+	y += 45
+
+	// Slider
+	drawLabel(ctx, "Diameter", x, y, 280, 20)
+	y += 25
+	drawEditBoxNum(ctx, "123.00", "px", x+180, y, 100, 28)
+	drawSlider(ctx, 0.4, x, y, 170, 28)
+	y += 55
+
+	drawButton(ctx, IconTRASH, "Delete", x, y, 160, 28, nanovgo.RGBA(128, 16, 8, 255))
+	drawButton(ctx, 0, "Cancel", x+170, y, 110, 28, nanovgo.RGBA(0, 0, 0, 0))
+
+	// Thumbnails box
+	drawThumbnails(ctx, 365, popy-30, 160, 300, data.Images, t)
 }
 
 func cosF(a float32) float32 {
@@ -150,7 +193,7 @@ func drawSearchBox(ctx *nanovgo.Context, text string, x, y, w, h float32) {
 	ctx.SetFontFace("icons")
 	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 64))
 	ctx.SetTextAlign(nanovgo.AlignCenter | nanovgo.AlignMiddle)
-	ctx.Text(x+h*0.55, y+h*0.55, cpToUTF8(iconSEARCH))
+	ctx.Text(x+h*0.55, y+h*0.55, cpToUTF8(IconSEARCH))
 
 	ctx.SetFontSize(20.0)
 	ctx.SetFontFace("sans")
@@ -163,7 +206,7 @@ func drawSearchBox(ctx *nanovgo.Context, text string, x, y, w, h float32) {
 	ctx.SetFontFace("icons")
 	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 32))
 	ctx.SetTextAlign(nanovgo.AlignCenter | nanovgo.AlignMiddle)
-	ctx.Text(x+w-h*0.55, y+h*0.55, cpToUTF8(iconCIRCLEDCROSS))
+	ctx.Text(x+w-h*0.55, y+h*0.55, cpToUTF8(IconCIRCLEDCROSS))
 }
 
 func drawDropDown(ctx *nanovgo.Context, text string, x, y, w, h float32) {
@@ -191,7 +234,7 @@ func drawDropDown(ctx *nanovgo.Context, text string, x, y, w, h float32) {
 	ctx.SetFontFace("icons")
 	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 64))
 	ctx.SetTextAlign(nanovgo.AlignCenter | nanovgo.AlignMiddle)
-	ctx.Text(x+w-h*0.5, y+h*0.5, cpToUTF8(iconCHEVRONRIGHT))
+	ctx.Text(x+w-h*0.5, y+h*0.5, cpToUTF8(IconCHEVRONRIGHT))
 }
 
 func drawEditBoxBase(ctx *nanovgo.Context, x, y, w, h float32) {
@@ -266,7 +309,7 @@ func drawCheckBox(ctx *nanovgo.Context, text string, x, y, w, h float32) {
 	ctx.SetFontFace("icons")
 	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 128))
 	ctx.SetTextAlign(nanovgo.AlignCenter | nanovgo.AlignMiddle)
-	ctx.Text(x+9+2, y+h*0.5, cpToUTF8(iconCHECK))
+	ctx.Text(x+9+2, y+h*0.5, cpToUTF8(IconCHECK))
 }
 
 func drawButton(ctx *nanovgo.Context, preicon int, text string, x, y, w, h float32, col nanovgo.Color) {
