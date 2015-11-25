@@ -609,7 +609,7 @@ func (p *glParams) renderFill(paint *Paint, scissor *nvgScissor, fringe float32,
 	call := &c.calls[len(c.calls)-1]
 	glPaths, call.pathOffset = c.allocPath(call.pathCount)
 
-	if len(paths) > 0 && paths[0].convex {
+	if len(paths) == 0 && paths[0].convex {
 		call.callType = glnvg_CONVEXFILL
 	} else {
 		call.callType = glnvg_FILL
