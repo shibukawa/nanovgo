@@ -165,10 +165,10 @@ func triArea2(ax, ay, bx, by, cx, cy float32) float32 {
 	return acX*abY - abX*acY
 }
 
-func polyArea(points []nvgPoint) float32 {
+func polyArea(points []nvgPoint, npts int) float32 {
 	var area float32 = 0.0
 	a := &points[0]
-	for i := 2; i < len(points); i++ {
+	for i := 2; i < npts; i++ {
 		b := &points[i-1]
 		c := &points[i]
 		area += triArea2(a.x, a.y, b.x, b.y, c.x, c.y)
@@ -176,9 +176,9 @@ func polyArea(points []nvgPoint) float32 {
 	return area * 0.5
 }
 
-func polyReverse(points []nvgPoint) {
+func polyReverse(points []nvgPoint, npts int) {
 	i := 0
-	j := len(points) - 1
+	j := npts - 1
 	for i < j {
 		points[i], points[j] = points[j], points[i]
 		i++

@@ -678,8 +678,8 @@ func (c *Context) ClosePath() {
 }
 
 // Sets the current sub-path winding, see nanovgo.Winding.
-func (c *Context) PathWinding(dir Winding) {
-	c.appendCommand([]float32{float32(nvg_WINDING), float32(dir)})
+func (c *Context) PathWinding(winding Winding) {
+	c.appendCommand([]float32{float32(nvg_WINDING), float32(winding)})
 }
 
 func (c *Context) DebugDumpPathCache() {
@@ -1430,7 +1430,7 @@ func (c *Context) flattenPaths() {
 			cache.closePath()
 			i++
 		case nvg_WINDING:
-			cache.pathWinding(Direction(c.commands[i+1]))
+			cache.pathWinding(Winding(c.commands[i+1]))
 			i += 2
 		default:
 			i++
@@ -1454,11 +1454,11 @@ func (c *Context) flattenPaths() {
 
 		// Enforce winding.
 		if path.count > 2 {
-			area := polyArea(points)
-			if path.winding == CCW && area < 0.0 {
-				polyReverse(points)
-			} else if path.winding == CW && area > 0.0 {
-				polyReverse(points)
+			area := polyArea(points, path.count)
+			if path.winding == SOLID && area < 0.0 {
+				polyReverse(points, path.count)
+			} else if path.winding == HOLE && area > 0.0 {
+				polyReverse(points, path.count)
 			}
 		}
 		for i := 0; i < path.count; i++ {

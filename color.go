@@ -11,18 +11,19 @@ type Color struct {
 	R, G, B, A float32
 }
 
-// Sets transparency of a color value.
+// TransRGBA sets transparency of a color value.
 func (c Color) TransRGBA(a uint8) Color {
 	c.A = float32(a) / 255.0
 	return c
 }
 
-// Sets transparency of a color value.
+// TransRGBAf sets transparency of a color value.
 func (c Color) TransRGBAf(a float32) Color {
 	c.A = a
 	return c
 }
 
+// PreMultiply preset alpha to each color.
 func (c Color) PreMultiply() Color {
 	c.R *= c.A
 	c.G *= c.A
@@ -30,21 +31,22 @@ func (c Color) PreMultiply() Color {
 	return c
 }
 
+// List returns color value as array.
 func (c Color) List() []float32 {
 	return []float32{c.R, c.G, c.B, c.A}
 }
 
-// Returns a color value from red, green, blue values. Alpha will be set to 255 (1.0f).
+// RGB returns a color value from red, green, blue values. Alpha will be set to 255 (1.0f).
 func RGB(r, g, b uint8) Color {
 	return RGBA(r, g, b, 255)
 }
 
-// Returns a color value from red, green, blue values. Alpha will be set to 1.0f.
+// RGBf returns a color value from red, green, blue values. Alpha will be set to 1.0f.
 func RGBf(r, g, b float32) Color {
 	return RGBAf(r, g, b, 1.0)
 }
 
-// Returns a color value from red, green, blue and alpha values.
+// RGBA returns a color value from red, green, blue and alpha values.
 func RGBA(r, g, b, a uint8) Color {
 	return Color{
 		R: float32(r) / 255.0,
@@ -54,18 +56,18 @@ func RGBA(r, g, b, a uint8) Color {
 	}
 }
 
-// Returns a color value from red, green, blue and alpha values.
+// RGBAf returns a color value from red, green, blue and alpha values.
 func RGBAf(r, g, b, a float32) Color {
 	return Color{r, g, b, a}
 }
 
-// Returns color value specified by hue, saturation and lightness.
+// HSL returns color value specified by hue, saturation and lightness.
 // HSL values are all in range [0..1], alpha will be set to 255.
 func HSL(h, s, l float32) Color {
 	return HSLA(h, s, l, 255)
 }
 
-// Returns color value specified by hue, saturation and lightness and alpha.
+// HSLA returns color value specified by hue, saturation and lightness and alpha.
 // HSL values are all in range [0..1], alpha in range [0..255]
 func HSLA(h, s, l float32, a uint8) Color {
 	h = float32(math.Mod(float64(h), 1.0))
@@ -89,7 +91,17 @@ func HSLA(h, s, l float32, a uint8) Color {
 	}
 }
 
-// Linearly interpolates from color c0 to c1, and returns resulting color value.
+// MONO returns color value specified by intensity value.
+func MONO(i, alpha uint8) Color {
+	return RGBA(i, i, i, alpha)
+}
+
+// MONOf returns color value specified by intensity value.
+func MONOf(i, alpha float32) Color {
+	return RGBAf(i, i, i, alpha)
+}
+
+// LerpRGBA linearly interpolates from color c0 to c1, and returns resulting color value.
 func LerpRGBA(c0, c1 Color, u float32) Color {
 	u = clampF(u, 0.0, 1.0)
 	oneMinus := 1 - u
