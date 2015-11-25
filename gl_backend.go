@@ -10,15 +10,16 @@ import (
 )
 
 const (
-	glnvg_LOC_VIEWSIZE = iota
-	glnvg_LOC_TEX
-	glnvg_LOC_FRAG
-	glnvg_MAX_LOCS
+	glnvgLocVIEWSIZE = iota
+	glnvgLocTEX
+	glnvgLocFRAG
+	glnvgMaxLOCS
 )
 
+// NewContext makes new NanoVGo context that is entry point of this API
 func NewContext(flags CreateFlags) (*Context, error) {
 	params := &glParams{
-		isEdgeAntiAlias: (flags & ANTIALIAS) != 0,
+		isEdgeAntiAlias: (flags & AntiAlias) != 0,
 		context: &glContext{
 			flags: flags,
 		},
@@ -30,7 +31,7 @@ type glShader struct {
 	program   gl.Program
 	fragment  gl.Shader
 	vertex    gl.Shader
-	locations [glnvg_MAX_LOCS]gl.Uniform
+	locations [glnvgMaxLOCS]gl.Uniform
 }
 
 func (s *glShader) createShader(name, header, opts, vShader, fShader string) error {
@@ -84,24 +85,25 @@ func (s *glShader) deleteShader() {
 }
 
 func (s *glShader) getUniforms() {
-	s.locations[glnvg_LOC_VIEWSIZE] = gl.GetUniformLocation(s.program, "viewSize")
-	s.locations[glnvg_LOC_TEX] = gl.GetUniformLocation(s.program, "tex")
-	s.locations[glnvg_LOC_FRAG] = gl.GetUniformLocation(s.program, "frag")
+	s.locations[glnvgLocVIEWSIZE] = gl.GetUniformLocation(s.program, "viewSize")
+	s.locations[glnvgLocTEX] = gl.GetUniformLocation(s.program, "tex")
+	s.locations[glnvgLocFRAG] = gl.GetUniformLocation(s.program, "frag")
 }
 
 const (
-	glnvg_NANOVG_GL_UNIFORMARRAY_SIZE = 11
+	glnvgGLUniformArraySize = 11
 )
 
 const (
-	glnvg_IMAGE_NODELETE ImageFlags = 1 << 16
+	// ImageNoDelete don't delete from memory when removing image
+	ImageNoDelete ImageFlags = 1 << 16
 )
 
 type glContext struct {
 	shader       glShader
 	view         [2]float32
 	textures     []*glTexture
-	textureId    int
+	textureID    int
 	vertexBuffer gl.Buffer
 	flags        CreateFlags
 	calls        []glCall
@@ -126,7 +128,7 @@ func (c *glContext) findTexture(id int) *glTexture {
 
 func (c *glContext) deleteTexture(id int) error {
 	tex := c.findTexture(id)
-	if tex != nil && (tex.flags&glnvg_IMAGE_NODELETE) == 0 {
+	if tex != nil && (tex.flags&ImageNoDelete) == 0 {
 		gl.DeleteTexture(tex.tex)
 		tex.id = 0
 		return nil
@@ -159,7 +161,7 @@ func (c *glContext) setStencilFunc(fun gl.Enum, ref int, mask uint32) {
 }
 
 func (c *glContext) checkError(str string) {
-	if c.flags&DEBUG == 0 {
+	if c.flags&Debug == 0 {
 		return
 	}
 	err := gl.GetError()
@@ -198,8 +200,8 @@ func (c *glContext) allocTexture() *glTexture {
 		tex = &glTexture{}
 		c.textures = append(c.textures, tex)
 	}
-	c.textureId += 1
-	tex.id = c.textureId
+	c.textureID++
+	tex.id = c.textureID
 	return tex
 }
 
@@ -228,15 +230,15 @@ func (c *glContext) convertPaint(frag *glFragUniforms, paint *Paint, scissor *nv
 		if tex == nil {
 			return errors.New("invalid texture in GLParams.convertPaint")
 		}
-		if tex.flags&IMAGE_FLIPY != 0 {
+		if tex.flags&ImageFlippy != 0 {
 			frag.setPaintMat(ScaleMatrix(1.0, -1.0).Multiply(paint.xform).Inverse().ToMat3x4())
 		} else {
 			frag.setPaintMat(paint.xform.Inverse().ToMat3x4())
 		}
-		frag.setType(nsvg_SHADER_FILLIMG)
+		frag.setType(nsvgShaderFILLIMG)
 
-		if tex.texType == nvg_TEXTURE_RGBA {
-			if tex.flags&IMAGE_PREMULTIPLIED != 0 {
+		if tex.texType == nvgTextureRGBA {
+			if tex.flags&ImagePreMultiplied != 0 {
 				frag.setTexType(0)
 			} else {
 				frag.setTexType(1)
@@ -245,7 +247,7 @@ func (c *glContext) convertPaint(frag *glFragUniforms, paint *Paint, scissor *nv
 			frag.setTexType(2)
 		}
 	} else {
-		frag.setType(nsvg_SHADER_FILLGRAD)
+		frag.setType(nsvgShaderFILLGRAD)
 		frag.setRadius(paint.radius)
 		frag.setFeather(paint.feather)
 		frag.setPaintMat(paint.xform.Inverse().ToMat3x4())
@@ -256,7 +258,7 @@ func (c *glContext) convertPaint(frag *glFragUniforms, paint *Paint, scissor *nv
 
 func (c *glContext) setUniforms(uniformOffset, image int) {
 	frag := c.uniforms[uniformOffset]
-	gl.Uniform4fv(c.shader.locations[glnvg_LOC_FRAG], frag[:])
+	gl.Uniform4fv(c.shader.locations[glnvgLocFRAG], frag[:])
 
 	if image != 0 {
 		c.bindTexture(&c.findTexture(image).tex)
@@ -294,7 +296,7 @@ func (c *glContext) fill(call *glCall) {
 	c.setUniforms(call.uniformOffset+1, call.image)
 	checkError(c, "fill fill")
 
-	if c.flags&ANTIALIAS != 0 {
+	if c.flags&AntiAlias != 0 {
 		c.setStencilFunc(gl.EQUAL, 0x00, 0xff)
 		gl.StencilOp(gl.KEEP, gl.KEEP, gl.KEEP)
 		// Draw fringes
@@ -322,7 +324,7 @@ func (c *glContext) convexFill(call *glCall) {
 		gl.DrawArrays(gl.TRIANGLE_FAN, path.fillOffset, path.fillCount)
 	}
 
-	if c.flags&ANTIALIAS != 0 {
+	if c.flags&AntiAlias != 0 {
 		for _, path := range paths {
 			gl.DrawArrays(gl.TRIANGLE_STRIP, path.strokeOffset, path.strokeCount)
 		}
@@ -332,7 +334,7 @@ func (c *glContext) convexFill(call *glCall) {
 func (c *glContext) stroke(call *glCall) {
 	paths := c.paths[call.pathOffset : call.pathOffset+call.pathCount]
 
-	if c.flags&STENCIL_STROKES != 0 {
+	if c.flags&StencilStrokes != 0 {
 		gl.Enable(gl.STENCIL_TEST)
 		c.setStencilMask(0xff)
 
@@ -416,13 +418,13 @@ func (p *glParams) renderCreate() error {
 
 func (p *glParams) renderCreateTexture(texType nvgTextureType, w, h int, flags ImageFlags, data []byte) int {
 	if nearestPow2(w) != w || nearestPow2(h) != h {
-		if (flags&IMAGE_REPEATX) != 0 || (flags&IMAGE_REPEATY) != 0 {
+		if (flags&ImageRepeatX) != 0 || (flags&ImageRepeatY) != 0 {
 			log.Printf("Repeat X/Y is not supported for non power-of-two textures (%d x %d)\n", w, h)
-			flags &= ^(IMAGE_REPEATY | IMAGE_REPEATX)
+			flags &= ^(ImageRepeatY | ImageRepeatX)
 		}
-		if (flags & IMAGE_GENERATE_MIPMAPS) != 0 {
+		if (flags & ImageGenerateMipmaps) != 0 {
 			log.Printf("Mip-maps is not support for non power-of-two textures (%d x %d)\n", w, h)
-			flags &= ^IMAGE_GENERATE_MIPMAPS
+			flags &= ^ImageGenerateMipmaps
 		}
 	}
 	tex := p.context.allocTexture()
@@ -435,26 +437,26 @@ func (p *glParams) renderCreateTexture(texType nvgTextureType, w, h int, flags I
 	p.context.bindTexture(&tex.tex)
 	gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
 
-	if texType == nvg_TEXTURE_RGBA {
+	if texType == nvgTextureRGBA {
 		gl.TexImage2D(gl.TEXTURE_2D, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, data)
 	} else {
 		gl.TexImage2D(gl.TEXTURE_2D, 0, w, h, gl.LUMINANCE, gl.UNSIGNED_BYTE, data)
 	}
 
-	if (flags & IMAGE_GENERATE_MIPMAPS) != 0 {
+	if (flags & ImageGenerateMipmaps) != 0 {
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
 	} else {
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
 	}
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 
-	if (flags & IMAGE_REPEATX) != 0 {
+	if (flags & ImageRepeatX) != 0 {
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
 	} else {
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
 	}
 
-	if (flags & IMAGE_REPEATY) != 0 {
+	if (flags & ImageRepeatY) != 0 {
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
 	} else {
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
@@ -462,7 +464,7 @@ func (p *glParams) renderCreateTexture(texType nvgTextureType, w, h int, flags I
 
 	gl.PixelStorei(gl.UNPACK_ALIGNMENT, 4)
 
-	if (flags & IMAGE_GENERATE_MIPMAPS) != 0 {
+	if (flags & ImageGenerateMipmaps) != 0 {
 		gl.GenerateMipmap(gl.TEXTURE_2D)
 	}
 
@@ -474,7 +476,7 @@ func (p *glParams) renderCreateTexture(texType nvgTextureType, w, h int, flags I
 
 func (p *glParams) renderDeleteTexture(id int) error {
 	tex := p.context.findTexture(id)
-	if tex.tex.Valid() && (tex.flags&glnvg_IMAGE_NODELETE) == 0 {
+	if tex.tex.Valid() && (tex.flags&ImageNoDelete) == 0 {
 		gl.DeleteTexture(tex.tex)
 		tex.id = 0
 		tex.tex = gl.Texture{}
@@ -491,7 +493,7 @@ func (p *glParams) renderUpdateTexture(image, x, y, w, h int, data []byte) error
 	p.context.bindTexture(&tex.tex)
 	gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
 
-	if tex.texType == nvg_TEXTURE_RGBA {
+	if tex.texType == nvgTextureRGBA {
 		data = data[y*tex.width*4:]
 	} else {
 		data = data[y*tex.width:]
@@ -499,7 +501,7 @@ func (p *glParams) renderUpdateTexture(image, x, y, w, h int, data []byte) error
 	x = 0
 	w = tex.width
 
-	if tex.texType == nvg_TEXTURE_RGBA {
+	if tex.texType == nvgTextureRGBA {
 		gl.TexSubImage2D(gl.TEXTURE_2D, 0, x, y, w, h, gl.RGBA, gl.UNSIGNED_BYTE, data)
 	} else {
 		gl.TexSubImage2D(gl.TEXTURE_2D, 0, x, y, w, h, gl.LUMINANCE, gl.UNSIGNED_BYTE, data)
@@ -570,19 +572,19 @@ func (p *glParams) renderFlush() {
 		gl.VertexAttribPointer(gl.Attrib{1}, 2, gl.FLOAT, false, 4*4, 8)
 
 		// Set view and texture just once per frame.
-		gl.Uniform1i(c.shader.locations[glnvg_LOC_TEX], 0)
-		gl.Uniform2fv(c.shader.locations[glnvg_LOC_VIEWSIZE], c.view[:])
+		gl.Uniform1i(c.shader.locations[glnvgLocTEX], 0)
+		gl.Uniform2fv(c.shader.locations[glnvgLocVIEWSIZE], c.view[:])
 
 		for i := range c.calls {
 			call := &c.calls[i]
 			switch call.callType {
-			case glnvg_FILL:
+			case glnvgFILL:
 				c.fill(call)
-			case glnvg_CONVEXFILL:
+			case glnvgCONVEXFILL:
 				c.convexFill(call)
-			case glnvg_STROKE:
+			case glnvgSTROKE:
 				c.stroke(call)
-			case glnvg_TRIANGLES:
+			case glnvgTRIANGLES:
 				c.triangles(call)
 			}
 		}
@@ -610,9 +612,9 @@ func (p *glParams) renderFill(paint *Paint, scissor *nvgScissor, fringe float32,
 	glPaths, call.pathOffset = c.allocPath(call.pathCount)
 
 	if len(paths) == 0 && paths[0].convex {
-		call.callType = glnvg_CONVEXFILL
+		call.callType = glnvgCONVEXFILL
 	} else {
-		call.callType = glnvg_FILL
+		call.callType = glnvgFILL
 	}
 
 	// Allocate vertices for all the paths
@@ -698,14 +700,14 @@ func (p *glParams) renderFill(paint *Paint, scissor *nvgScissor, fringe float32,
 
 	// Setup uniforms for draw calls
 	var paintFrag *glFragUniforms
-	if call.callType == glnvg_FILL {
+	if call.callType == glnvgFILL {
 		var uniforms []glFragUniforms
 		uniforms, call.uniformOffset = c.allocFragUniforms(2)
 		// Simple shader for stencil
 		u0 := &uniforms[0]
 		u0.reset()
 		u0.setStrokeThr(-1.0)
-		u0.setType(nsvg_SHADER_SIMPLE)
+		u0.setType(nsvgShaderSIMPLE)
 		paintFrag = &uniforms[1]
 	} else {
 		var frags []glFragUniforms
@@ -722,7 +724,7 @@ func (p *glParams) renderStroke(paint *Paint, scissor *nvgScissor, fringe float3
 	var glPaths []glPath
 	p.context.calls = append(c.calls, glCall{})
 	call := &c.calls[len(c.calls)-1]
-	call.callType = glnvg_STROKE
+	call.callType = glnvgSTROKE
 	glPaths, call.pathOffset = c.allocPath(len(paths))
 	call.pathCount = len(paths)
 	call.image = paint.image
@@ -753,7 +755,7 @@ func (p *glParams) renderStroke(paint *Paint, scissor *nvgScissor, fringe float3
 	}
 
 	// Fill shader
-	if c.flags&STENCIL_STROKES != 0 {
+	if c.flags&StencilStrokes != 0 {
 		var uniforms []glFragUniforms
 		uniforms, call.uniformOffset = c.allocFragUniforms(2)
 		u0 := &uniforms[0]
@@ -779,7 +781,7 @@ func (p *glParams) renderTriangles(paint *Paint, scissor *nvgScissor, vertexes [
 	callIndex := len(c.calls)
 
 	c.calls = append(c.calls, glCall{
-		callType:       glnvg_TRIANGLES,
+		callType:       glnvgTRIANGLES,
 		image:          paint.image,
 		triangleOffset: vertexOffset / 4,
 		triangleCount:  vertexCount,
@@ -801,7 +803,7 @@ func (p *glParams) renderTriangles(paint *Paint, scissor *nvgScissor, vertexes [
 	f0 := &frags[0]
 	f0.reset()
 	c.convertPaint(f0, paint, scissor, 1.0, 1.0, -1.0)
-	f0.setType(nsvg_SHADER_IMG)
+	f0.setType(nsvgShaderIMG)
 }
 
 func (p *glParams) renderDelete() {
@@ -811,7 +813,7 @@ func (p *glParams) renderDelete() {
 		gl.DeleteBuffer(c.vertexBuffer)
 	}
 	for _, texture := range c.textures {
-		if texture.tex.Valid() && (texture.flags&glnvg_IMAGE_NODELETE) == 0 {
+		if texture.tex.Valid() && (texture.flags&ImageNoDelete) == 0 {
 			gl.DeleteTexture(texture.tex)
 		}
 	}
@@ -833,7 +835,7 @@ func dumpProgramError(program gl.Program, name string) error {
 }
 
 func checkError(p *glContext, str string) {
-	if p.flags&DEBUG == 0 {
+	if p.flags&Debug == 0 {
 		return
 	}
 	err := gl.GetError()
@@ -852,7 +854,7 @@ func maxVertexCount(paths []nvgPath) int {
 	return count
 }
 
-var fillVertexShader string = `
+var fillVertexShader = `
 #ifdef NANOVG_GL3
    uniform vec2 viewSize;
    in vec2 vertex;

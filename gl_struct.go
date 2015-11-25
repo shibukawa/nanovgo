@@ -5,20 +5,20 @@ import (
 )
 
 const (
-	nsvg_SHADER_FILLGRAD = iota
-	nsvg_SHADER_FILLIMG
-	nsvg_SHADER_SIMPLE
-	nsvg_SHADER_IMG
+	nsvgShaderFILLGRAD = iota
+	nsvgShaderFILLIMG
+	nsvgShaderSIMPLE
+	nsvgShaderIMG
 )
 
 type glnvgCallType int
 
 const (
-	glnvg_NONE glnvgCallType = iota
-	glnvg_FILL
-	glnvg_CONVEXFILL
-	glnvg_STROKE
-	glnvg_TRIANGLES
+	glnvgNONE glnvgCallType = iota
+	glnvgFILL
+	glnvgCONVEXFILL
+	glnvgSTROKE
+	glnvgTRIANGLES
 )
 
 type glCall struct {

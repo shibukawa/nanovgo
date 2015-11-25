@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"github.com/shibukawa/nanovgo/fontstashmini"
 	"image"
-	_ "image/jpeg"
-	_ "image/png"
+	_ "image/jpeg" // to read jpeg
+	_ "image/png"  // to read png
 	"log"
 	"os"
 )
 
+// Context is an entry point object to use NanoVGo API and created by NewContext() function.
+//
 // State Handling
 //
 // NanoVG contains state which represents how paths will be rendered.
@@ -122,6 +124,7 @@ type Context struct {
 	textTriCount   int
 }
 
+// Delete is called when tearing down NanoVGo context
 func (c *Context) Delete() {
 
 	for i, fontImage := range c.fontImages {
@@ -133,7 +136,7 @@ func (c *Context) Delete() {
 	c.params.renderDelete()
 }
 
-// Begin drawing a new frame
+// BeginFrame begins drawing a new frame
 // Calls to NanoVGo drawing API should be wrapped in Context.BeginFrame() & Context.EndFrame()
 // Context.BeginFrame() defines the size of the window to render to in relation currently
 // set viewport (i.e. glViewport on GL backends). Device pixel ration allows to
@@ -158,12 +161,12 @@ func (c *Context) BeginFrame(windowWidth, windowHeight int, devicePixelRatio flo
 	c.textTriCount = 0
 }
 
-// Cancels drawing the current frame.
+// CancelFrame cancels drawing the current frame.
 func (c *Context) CancelFrame() {
 	c.params.renderCancel()
 }
 
-// Ends drawing flushing remaining render state.
+// EndFrame ends drawing flushing remaining render state.
 func (c *Context) EndFrame() {
 	c.params.renderFlush()
 	if c.fontImageIdx != 0 {
@@ -188,16 +191,16 @@ func (c *Context) EndFrame() {
 		c.fontImages[0] = fontImage
 		c.fontImageIdx = 0
 		// clear all image after j
-		for i := j; i < nvg_MAX_FONTIMAGES; i++ {
+		for i := j; i < nvgMaxFontImages; i++ {
 			c.fontImages[i] = 0
 		}
 	}
 }
 
-// Pushes and saves the current render state into a state stack.
+// Save pushes and saves the current render state into a state stack.
 // A matching Restore() must be used to restore the state.
 func (c *Context) Save() {
-	if len(c.states) >= nvg_MAX_STATES {
+	if len(c.states) >= nvgMaxStates {
 		return
 	}
 	if len(c.states) > 0 {
@@ -207,7 +210,7 @@ func (c *Context) Save() {
 	}
 }
 
-// Pops and restores current render state.
+// Restore pops and restores current render state.
 func (c *Context) Restore() {
 	nStates := len(c.states)
 	if nStates > 1 {
@@ -215,125 +218,126 @@ func (c *Context) Restore() {
 	}
 }
 
+// Block makes Save/Restore block.
 func (c *Context) Block(block func()) {
 	c.Save()
 	defer c.Restore()
 	block()
 }
 
-// Resets current render state to default values. Does not affect the render state stack.
+// Reset resets current render state to default values. Does not affect the render state stack.
 func (c *Context) Reset() {
 	c.getState().reset()
 }
 
-// Sets the stroke width of the stroke style.
+// SetStrokeWidth sets the stroke width of the stroke style.
 func (c *Context) SetStrokeWidth(width float32) {
 	c.getState().strokeWidth = width
 }
 
-// Gets the stroke width of the stroke style.
+// StrokeWidth gets the stroke width of the stroke style.
 func (c *Context) StrokeWidth() float32 {
 	return c.getState().strokeWidth
 }
 
-// Sets the miter limit of the stroke style.
+// SetMiterLimit sets the miter limit of the stroke style.
 // Miter limit controls when a sharp corner is beveled.
 func (c *Context) SetMiterLimit(limit float32) {
 	c.getState().miterLimit = limit
 }
 
-// Gets the miter limit of the stroke style.
+// MiterLimit gets the miter limit of the stroke style.
 func (c *Context) MiterLimit() float32 {
 	return c.getState().miterLimit
 }
 
-// Sets how the end of the line (cap) is drawn,
-// Can be one of: nanovgo.BUTT (default), nanovgo.ROUND, nanovgo.SQUARE.
+// SetLineCap sets how the end of the line (cap) is drawn,
+// Can be one of: Butt (default), Round, Squre.
 func (c *Context) SetLineCap(cap LineCap) {
 	c.getState().lineCap = cap
 }
 
-// Gets how the end of the line (cap) is drawn,
+// LineCap gets how the end of the line (cap) is drawn,
 func (c *Context) LineCap() LineCap {
 	return c.getState().lineCap
 }
 
-// Sets how sharp path corners are drawn.
-// Can be one of nanovgo.MITER (default), nanovgo.ROUND, nanovgo.BEVEL.
+// SetLineJoin sets how sharp path corners are drawn.
+// Can be one of Miter (default), Round, Bevel.
 func (c *Context) SetLineJoin(joint LineCap) {
 	c.getState().lineJoin = joint
 }
 
-// Gets how sharp path corners are drawn.
+// LineJoin gets how sharp path corners are drawn.
 func (c *Context) LineJoin() LineCap {
 	return c.getState().lineJoin
 }
 
-// Sets the transparency applied to all rendered shapes.
+// SetGlobalAlpha sets the transparency applied to all rendered shapes.
 // Already transparent paths will get proportionally more transparent as well.
 func (c *Context) SetGlobalAlpha(alpha float32) {
 	c.getState().alpha = alpha
 }
 
-// Gets the transparency applied to all rendered shapes.
+// GlobalAlpha gets the transparency applied to all rendered shapes.
 func (c *Context) GlobalAlpha() float32 {
 	return c.getState().alpha
 }
 
-// Premultiplies current coordinate system by specified matrix.
-func (ctx *Context) SetTransform(t TransformMatrix) {
-	state := ctx.getState()
+// SetTransform premultiplies current coordinate system by specified matrix.
+func (c *Context) SetTransform(t TransformMatrix) {
+	state := c.getState()
 	state.xform = state.xform.PreMultiply(t)
 }
 
-// Premultiplies current coordinate system by specified matrix.
+// SetTransformByValue premultiplies current coordinate system by specified matrix.
 // The parameters are interpreted as matrix as follows:
 //   [a c e]
 //   [b d f]
 //   [0 0 1]
-func (ctx *Context) SetTransformByValue(a, b, c, d, e, f float32) {
+func (cx *Context) SetTransformByValue(a, b, c, d, e, f float32) {
 	t := TransformMatrix{a, b, c, d, e, f}
-	state := ctx.getState()
+	state := cx.getState()
 	state.xform = state.xform.PreMultiply(t)
 }
 
-// Resets current transform to a identity matrix.
+// ResetTransform resets current transform to a identity matrix.
 func (c *Context) ResetTransform() {
 	state := c.getState()
 	state.xform = IdentityMatrix()
 }
 
-// Translates current coordinate system.
+// Translate translates current coordinate system.
 func (c *Context) Translate(x, y float32) {
 	state := c.getState()
 	state.xform = state.xform.PreMultiply(TranslateMatrix(x, y))
 }
 
-// Rotates current coordinate system. Angle is specified in radians.
+// Rotate rotates current coordinate system. Angle is specified in radians.
 func (c *Context) Rotate(angle float32) {
 	state := c.getState()
 	state.xform = state.xform.PreMultiply(RotateMatrix(angle))
 }
 
-// Skews the current coordinate system along X axis. Angle is specified in radians.
+// SkewX skews the current coordinate system along X axis. Angle is specified in radians.
 func (c *Context) SkewX(angle float32) {
 	state := c.getState()
 	state.xform = state.xform.PreMultiply(SkewXMatrix(angle))
 }
 
-// Skews the current coordinate system along Y axis. Angle is specified in radians.
+// SkewY skews the current coordinate system along Y axis. Angle is specified in radians.
 func (c *Context) SkewY(angle float32) {
 	state := c.getState()
 	state.xform = state.xform.PreMultiply(SkewYMatrix(angle))
 }
 
-// Scales the current coordinate system.
+// Scale scales the current coordinate system.
 func (c *Context) Scale(x, y float32) {
 	state := c.getState()
 	state.xform = state.xform.PreMultiply(ScaleMatrix(x, y))
 }
 
-// Returns the top part (a-f) of the current transformation matrix.
+// CurrentTransform returns the top part (a-f) of the current transformation matrix.
 //   [a c e]
 //   [b d f]
 //   [0 0 1]
@@ -342,31 +346,31 @@ func (c *Context) CurrentTransform() TransformMatrix {
 	return c.getState().xform
 }
 
-// Sets current stroke style to a solid color.
+// SetStrokeColor sets current stroke style to a solid color.
 func (c *Context) SetStrokeColor(color Color) {
 	c.getState().stroke.setPaintColor(color)
 }
 
-// Sets current stroke style to a paint, which can be a one of the gradients or a pattern.
+// SetStrokePaint sets current stroke style to a paint, which can be a one of the gradients or a pattern.
 func (c *Context) SetStrokePaint(paint Paint) {
 	state := c.getState()
 	state.stroke = paint
 	state.stroke.xform = state.stroke.xform.Multiply(state.xform)
 }
 
-// Sets current fill style to a solid color.
+// SetFillColor sets current fill style to a solid color.
 func (c *Context) SetFillColor(color Color) {
 	c.getState().fill.setPaintColor(color)
 }
 
-// Sets current fill style to a paint, which can be a one of the gradients or a pattern.
+// SetFillPaint sets current fill style to a paint, which can be a one of the gradients or a pattern.
 func (c *Context) SetFillPaint(paint Paint) {
 	state := c.getState()
 	state.fill = paint
 	state.fill.xform = state.fill.xform.Multiply(state.xform)
 }
 
-// Creates image by loading it from the disk from specified file name.
+// CreateImage creates image by loading it from the disk from specified file name.
 // Returns handle to the image.
 func (c *Context) CreateImage(filePath string, flags ImageFlags) int {
 	file, err := os.Open(filePath)
@@ -381,7 +385,7 @@ func (c *Context) CreateImage(filePath string, flags ImageFlags) int {
 	return c.CreateImageFromGoImage(flags, img)
 }
 
-// Creates image by loading it from the specified chunk of memory.
+// CreateImageFromMemory creates image by loading it from the specified chunk of memory.
 // Returns handle to the image.
 func (c *Context) CreateImageFromMemory(flags ImageFlags, data []byte) int {
 	reader := bytes.NewReader(data)
@@ -392,7 +396,7 @@ func (c *Context) CreateImageFromMemory(flags ImageFlags, data []byte) int {
 	return c.CreateImageFromGoImage(flags, img)
 }
 
-// Creates image by loading it from the specified image.Image object.
+// CreateImageFromGoImage creates image by loading it from the specified image.Image object.
 // Returns handle to the image.
 func (c *Context) CreateImageFromGoImage(imageFlag ImageFlags, img image.Image) int {
 	bounds := img.Bounds()
@@ -410,13 +414,13 @@ func (c *Context) CreateImageFromGoImage(imageFlag ImageFlags, img image.Image) 
 	return c.CreateImageRGBA(size.X, size.Y, imageFlag, rgba.Pix)
 }
 
-// Creates image from specified image data.
+// CreateImageRGBA creates image from specified image data.
 // Returns handle to the image.
 func (c *Context) CreateImageRGBA(w, h int, imageFlags ImageFlags, data []byte) int {
-	return c.params.renderCreateTexture(nvg_TEXTURE_RGBA, w, h, imageFlags, data)
+	return c.params.renderCreateTexture(nvgTextureRGBA, w, h, imageFlags, data)
 }
 
-// Updates image data specified by image handle.
+// UpdateImage updates image data specified by image handle.
 func (c *Context) UpdateImage(img int, data []byte) error {
 	w, h, err := c.params.renderGetTextureSize(img)
 	if err != nil {
@@ -425,17 +429,17 @@ func (c *Context) UpdateImage(img int, data []byte) error {
 	return c.params.renderUpdateTexture(img, 0, 0, w, h, data)
 }
 
-// Returns the dimensions of a created image.
+// ImageSize returns the dimensions of a created image.
 func (c *Context) ImageSize(img int) (int, int, error) {
 	return c.params.renderGetTextureSize(img)
 }
 
-// Deletes created image.
+// DeleteImage deletes created image.
 func (c *Context) DeleteImage(img int) {
 	c.params.renderDeleteTexture(img)
 }
 
-// Sets the current scissor rectangle.
+// Scissor sets the current scissor rectangle.
 // The scissor rectangle is transformed by the current transform.
 func (c *Context) Scissor(x, y, w, h float32) {
 	state := c.getState()
@@ -447,7 +451,7 @@ func (c *Context) Scissor(x, y, w, h float32) {
 	state.scissor.extent = [2]float32{w * 0.5, h * 0.5}
 }
 
-// Intersects current scissor rectangle with the specified rectangle.
+// IntersectScissor calculates intersects current scissor rectangle with the specified rectangle.
 // The scissor rectangle is transformed by the current transform.
 // Note: in case the rotation of previous scissor rect differs from
 // the current one, the intersection will be done between the specified
@@ -471,7 +475,7 @@ func (c *Context) IntersectScissor(x, y, w, h float32) {
 	c.Scissor(rect[0], rect[1], rect[2], rect[3])
 }
 
-// Reset and disables scissoring.
+// ResetScissor resets and disables scissoring.
 func (c *Context) ResetScissor() {
 	state := c.getState()
 
@@ -479,52 +483,52 @@ func (c *Context) ResetScissor() {
 	state.scissor.extent = [2]float32{-1.0, -1.0}
 }
 
-// Clears the current path and sub-paths.
+// BeginPath clears the current path and sub-paths.
 func (c *Context) BeginPath() {
 	c.commands = c.commands[:0]
 	c.cache.clearPathCache()
 }
 
-// Starts new sub-path with specified point as first point.
+// MoveTo starts new sub-path with specified point as first point.
 func (c *Context) MoveTo(x, y float32) {
-	c.appendCommand([]float32{float32(nvg_MOVETO), x, y})
+	c.appendCommand([]float32{float32(nvgMOVETO), x, y})
 }
 
-// Adds line segment from the last point in the path to the specified point.
+// LineTo adds line segment from the last point in the path to the specified point.
 func (c *Context) LineTo(x, y float32) {
-	c.appendCommand([]float32{float32(nvg_LINETO), x, y})
+	c.appendCommand([]float32{float32(nvgLINETO), x, y})
 }
 
-// Adds cubic bezier segment from last point in the path via two control points to the specified point.
+// BezierTo adds cubic bezier segment from last point in the path via two control points to the specified point.
 func (c *Context) BezierTo(c1x, c1y, c2x, c2y, x, y float32) {
-	c.appendCommand([]float32{float32(nvg_BEZIERTO), c1x, c1y, c2x, c2y, x, y})
+	c.appendCommand([]float32{float32(nvgBEZIERTO), c1x, c1y, c2x, c2y, x, y})
 }
 
-// Adds quadratic bezier segment from last point in the path via a control point to the specified point.
+// QuadTo adds quadratic bezier segment from last point in the path via a control point to the specified point.
 func (c *Context) QuadTo(cx, cy, x, y float32) {
 	x0 := c.commandX
 	y0 := c.commandY
-	c.appendCommand([]float32{float32(nvg_BEZIERTO),
+	c.appendCommand([]float32{float32(nvgBEZIERTO),
 		x0 + 2.0/3.0*(cx-x0), y0 + 2.0/3.0*(cy-y0),
 		x + 2.0/3.0*(cx-x), y + 2.0/3.0*(cy-y),
 		x, y,
 	})
 }
 
-// Creates new circle arc shaped sub-path. The arc center is at cx,cy, the arc radius is r,
+// Arc creates new circle arc shaped sub-path. The arc center is at cx,cy, the arc radius is r,
 // and the arc is drawn from angle a0 to a1, and swept in direction dir (nanovgo.CCW, or nanovgo.CW).
 // Angles are specified in radians.
 func (c *Context) Arc(cx, cy, r, a0, a1 float32, dir Direction) {
 	var move nvgCommands
 	if len(c.commands) > 0 {
-		move = nvg_LINETO
+		move = nvgLINETO
 	} else {
-		move = nvg_MOVETO
+		move = nvgMOVETO
 	}
 
 	// Clamp angles
 	da := a1 - a0
-	if dir == CW {
+	if dir == Clockwise {
 		if absF(da) >= PI*2 {
 			da = PI * 2
 		} else {
@@ -547,7 +551,7 @@ func (c *Context) Arc(cx, cy, r, a0, a1 float32, dir Direction) {
 	sin, cos := sinCosF(hda)
 	kappa := absF(4.0 / 3.0 * (1.0 - cos) / sin)
 
-	if dir == CCW {
+	if dir == CounterClockwise {
 		kappa = -kappa
 	}
 	values := make([]float32, 0, 3+5*7+100)
@@ -563,7 +567,7 @@ func (c *Context) Arc(cx, cy, r, a0, a1 float32, dir Direction) {
 		if i == 0 {
 			values = append(values, float32(move), x, y)
 		} else {
-			values = append(values, float32(nvg_BEZIERTO), px+pTanX, py+pTanY, x-tanX, y-tanY, x, y)
+			values = append(values, float32(nvgBEZIERTO), px+pTanX, py+pTanY, x-tanX, y-tanY, x, y)
 		}
 		px = x
 		py = y
@@ -573,7 +577,7 @@ func (c *Context) Arc(cx, cy, r, a0, a1 float32, dir Direction) {
 	c.appendCommand(values)
 }
 
-// Adds an arc segment at the corner defined by the last path point, and two specified points.
+// ArcTo adds an arc segment at the corner defined by the last path point, and two specified points.
 func (c *Context) ArcTo(x1, y1, x2, y2, radius float32) {
 	if len(c.commands) == 0 {
 		return
@@ -611,29 +615,29 @@ func (c *Context) ArcTo(x1, y1, x2, y2, radius float32) {
 		cy = y1 + dy0*d + -dx0*radius
 		a0 = atan2F(dx0, -dy0)
 		a1 = atan2F(-dx1, dy1)
-		dir = CW
+		dir = Clockwise
 	} else {
 		cx = x1 + dx0*d + -dy0*radius
 		cy = y1 + dy0*d + dx0*radius
 		a0 = atan2F(-dx0, dy0)
 		a1 = atan2F(dx1, -dy1)
-		dir = CCW
+		dir = CounterClockwise
 	}
 	c.Arc(cx, cy, radius, a0, a1, dir)
 }
 
-// Creates new rectangle shaped sub-path.
+// Rect creates new rectangle shaped sub-path.
 func (c *Context) Rect(x, y, w, h float32) {
 	c.appendCommand([]float32{
-		float32(nvg_MOVETO), x, y,
-		float32(nvg_LINETO), x, y + h,
-		float32(nvg_LINETO), x + w, y + h,
-		float32(nvg_LINETO), x + w, y,
-		float32(nvg_CLOSE),
+		float32(nvgMOVETO), x, y,
+		float32(nvgLINETO), x, y + h,
+		float32(nvgLINETO), x + w, y + h,
+		float32(nvgLINETO), x + w, y,
+		float32(nvgCLOSE),
 	})
 }
 
-// Creates new rounded rectangle shaped sub-path.
+// RoundedRect creates new rounded rectangle shaped sub-path.
 func (c *Context) RoundedRect(x, y, w, h, r float32) {
 	if r < 0.1 {
 		c.Rect(x, y, w, h)
@@ -641,47 +645,48 @@ func (c *Context) RoundedRect(x, y, w, h, r float32) {
 		rx := minF(r, absF(w)*0.5) * signF(w)
 		ry := minF(r, absF(h)*0.5) * signF(h)
 		c.appendCommand([]float32{
-			float32(nvg_MOVETO), x, y + ry,
-			float32(nvg_LINETO), x, y + h - ry,
-			float32(nvg_BEZIERTO), x, y + h - ry*(1-KAPPA90), x + rx*(1-KAPPA90), y + h, x + rx, y + h,
-			float32(nvg_LINETO), x + w - rx, y + h,
-			float32(nvg_BEZIERTO), x + w - rx*(1-KAPPA90), y + h, x + w, y + h - ry*(1-KAPPA90), x + w, y + h - ry,
-			float32(nvg_LINETO), x + w, y + ry,
-			float32(nvg_BEZIERTO), x + w, y + ry*(1-KAPPA90), x + w - rx*(1-KAPPA90), y, x + w - rx, y,
-			float32(nvg_LINETO), x + rx, y,
-			float32(nvg_BEZIERTO), x + rx*(1-KAPPA90), y, x, y + ry*(1-KAPPA90), x, y + ry,
-			float32(nvg_CLOSE),
+			float32(nvgMOVETO), x, y + ry,
+			float32(nvgLINETO), x, y + h - ry,
+			float32(nvgBEZIERTO), x, y + h - ry*(1-Kappa90), x + rx*(1-Kappa90), y + h, x + rx, y + h,
+			float32(nvgLINETO), x + w - rx, y + h,
+			float32(nvgBEZIERTO), x + w - rx*(1-Kappa90), y + h, x + w, y + h - ry*(1-Kappa90), x + w, y + h - ry,
+			float32(nvgLINETO), x + w, y + ry,
+			float32(nvgBEZIERTO), x + w, y + ry*(1-Kappa90), x + w - rx*(1-Kappa90), y, x + w - rx, y,
+			float32(nvgLINETO), x + rx, y,
+			float32(nvgBEZIERTO), x + rx*(1-Kappa90), y, x, y + ry*(1-Kappa90), x, y + ry,
+			float32(nvgCLOSE),
 		})
 	}
 }
 
-// Creates new ellipse shaped sub-path.
+// Ellipse creates new ellipse shaped sub-path.
 func (c *Context) Ellipse(cx, cy, rx, ry float32) {
 	c.appendCommand([]float32{
-		float32(nvg_MOVETO), cx - rx, cy,
-		float32(nvg_BEZIERTO), cx - rx, cy + ry*KAPPA90, cx - rx*KAPPA90, cy + ry, cx, cy + ry,
-		float32(nvg_BEZIERTO), cx + rx*KAPPA90, cy + ry, cx + rx, cy + ry*KAPPA90, cx + rx, cy,
-		float32(nvg_BEZIERTO), cx + rx, cy - ry*KAPPA90, cx + rx*KAPPA90, cy - ry, cx, cy - ry,
-		float32(nvg_BEZIERTO), cx - rx*KAPPA90, cy - ry, cx - rx, cy - ry*KAPPA90, cx - rx, cy,
-		float32(nvg_CLOSE),
+		float32(nvgMOVETO), cx - rx, cy,
+		float32(nvgBEZIERTO), cx - rx, cy + ry*Kappa90, cx - rx*Kappa90, cy + ry, cx, cy + ry,
+		float32(nvgBEZIERTO), cx + rx*Kappa90, cy + ry, cx + rx, cy + ry*Kappa90, cx + rx, cy,
+		float32(nvgBEZIERTO), cx + rx, cy - ry*Kappa90, cx + rx*Kappa90, cy - ry, cx, cy - ry,
+		float32(nvgBEZIERTO), cx - rx*Kappa90, cy - ry, cx - rx, cy - ry*Kappa90, cx - rx, cy,
+		float32(nvgCLOSE),
 	})
 }
 
-// Creates new circle shaped sub-path.
+// Circle creates new circle shaped sub-path.
 func (c *Context) Circle(cx, cy, r float32) {
 	c.Ellipse(cx, cy, r, r)
 }
 
-// Closes current sub-path with a line segment.
+// ClosePath closes current sub-path with a line segment.
 func (c *Context) ClosePath() {
-	c.appendCommand([]float32{float32(nvg_CLOSE)})
+	c.appendCommand([]float32{float32(nvgCLOSE)})
 }
 
-// Sets the current sub-path winding, see nanovgo.Winding.
+// PathWinding sets the current sub-path winding, see Winding.
 func (c *Context) PathWinding(winding Winding) {
-	c.appendCommand([]float32{float32(nvg_WINDING), float32(winding)})
+	c.appendCommand([]float32{float32(nvgWINDING), float32(winding)})
 }
 
+// DebugDumpPathCache prints cached path information to console
 func (c *Context) DebugDumpPathCache() {
 	log.Printf("Dumping %d cached paths\n", len(c.cache.paths))
 	for i := 0; i < len(c.cache.paths); i++ {
@@ -702,15 +707,15 @@ func (c *Context) DebugDumpPathCache() {
 	}
 }
 
-// Fills the current path with current fill style.
+// Fill fills the current path with current fill style.
 func (c *Context) Fill() {
 	state := c.getState()
 	fillPaint := state.fill
 	c.flattenPaths()
 	if c.params.edgeAntiAlias() {
-		c.cache.expandFill(c.fringeWidth, MITER, 2.4, c.fringeWidth)
+		c.cache.expandFill(c.fringeWidth, Miter, 2.4, c.fringeWidth)
 	} else {
-		c.cache.expandFill(0.0, MITER, 2.4, c.fringeWidth)
+		c.cache.expandFill(0.0, Miter, 2.4, c.fringeWidth)
 	}
 
 	// Apply global alpha
@@ -728,7 +733,7 @@ func (c *Context) Fill() {
 	}
 }
 
-// Fills the current path with current stroke style.
+// Stroke draws the current path with current stroke style.
 func (c *Context) Stroke() {
 	state := c.getState()
 	scale := state.xform.getAverageScale()
@@ -764,104 +769,104 @@ func (c *Context) Stroke() {
 	}
 }
 
-// Creates font by loading it from the disk from specified file name.
+// CreateFont creates font by loading it from the disk from specified file name.
 // Returns handle to the font.
 func (c *Context) CreateFont(name, filePath string) int {
 	return c.fs.AddFont(name, filePath)
 }
 
-// Creates image by loading it from the specified memory chunk.
+// CreateFontFromMemory creates image by loading it from the specified memory chunk.
 // Returns handle to the font.
 func (c *Context) CreateFontFromMemory(name string, data []byte, freeData uint8) int {
 	return c.fs.AddFontFromMemory(name, data, freeData)
 }
 
-// Finds a loaded font of specified name, and returns handle to it, or -1 if the font is not found.
+// FindFont finds a loaded font of specified name, and returns handle to it, or -1 if the font is not found.
 func (c *Context) FindFont(name string) int {
 	return c.fs.GetFontByName(name)
 }
 
-// Sets the font size of current text style.
+// SetFontSize sets the font size of current text style.
 func (c *Context) SetFontSize(size float32) {
 	c.getState().fontSize = size
 }
 
-// Gets the font size of current text style.
+// FontSize gets the font size of current text style.
 func (c *Context) FontSize() float32 {
 	return c.getState().fontSize
 }
 
-// Sets the font blur of current text style.
+// SetFontBlur sets the font blur of current text style.
 func (c *Context) SetFontBlur(blur float32) {
 	c.getState().fontBlur = blur
 }
 
-// Gets the font blur of current text style.
+// FontBlur gets the font blur of current text style.
 func (c *Context) FontBlur() float32 {
 	return c.getState().fontBlur
 }
 
-// Sets the letter spacing of current text style.
+// SetTextLetterSpacing sets the letter spacing of current text style.
 func (c *Context) SetTextLetterSpacing(spacing float32) {
 	c.getState().letterSpacing = spacing
 }
 
-// Gets the letter spacing of current text style.
+// TextLetterSpacing gets the letter spacing of current text style.
 func (c *Context) TextLetterSpacing() float32 {
 	return c.getState().letterSpacing
 }
 
-// Sets the line height of current text style.
+// SetTextLineHeight sets the line height of current text style.
 func (c *Context) SetTextLineHeight(lineHeight float32) {
 	c.getState().lineHeight = lineHeight
 }
 
-// Gets the line height of current text style.
+// TextLineHeight gets the line height of current text style.
 func (c *Context) TextLineHeight() float32 {
 	return c.getState().lineHeight
 }
 
-// Sets the text align of current text style.
+// SetTextAlign sets the text align of current text style.
 func (c *Context) SetTextAlign(align Align) {
 	c.getState().textAlign = align
 }
 
-// Gets the text align of current text style.
+// TextAlign gets the text align of current text style.
 func (c *Context) TextAlign() Align {
 	return c.getState().textAlign
 }
 
-// Sets the font face based on specified id of current text style.
-func (c *Context) SetFontFaceId(font int) {
-	c.getState().fontId = font
+// SetFontFaceID sets the font face based on specified id of current text style.
+func (c *Context) SetFontFaceID(font int) {
+	c.getState().fontID = font
 }
 
-// Gets the font face id of current text style.
-func (c *Context) FontFaceId() int {
-	return c.getState().fontId
+// FontFaceID gets the font face id of current text style.
+func (c *Context) FontFaceID() int {
+	return c.getState().fontID
 }
 
-// Sets the font face based on specified name of current text style.
+// SetFontFace sets the font face based on specified name of current text style.
 func (c *Context) SetFontFace(font string) {
-	c.getState().fontId = c.fs.GetFontByName(font)
+	c.getState().fontID = c.fs.GetFontByName(font)
 }
 
-// Gets the font face name of current text style.
+// FontFace gets the font face name of current text style.
 func (c *Context) FontFace() string {
 	return c.fs.GetFontName()
 }
 
-// Draws text string at specified location. If end is specified only the sub-string up to the end is drawn.
+// Text draws text string at specified location. If end is specified only the sub-string up to the end is drawn.
 func (c *Context) Text(x, y float32, str string) float32 {
 	return c.TextRune(x, y, []rune(str))
 }
 
-// Draws text string at specified location. If end is specified only the sub-string up to the end is drawn.
+// TextRune is an alternate version of Text that accepts rune slice.
 func (c *Context) TextRune(x, y float32, runes []rune) float32 {
 	state := c.getState()
 	scale := state.getFontScale() * c.devicePxRatio
 	invScale := 1.0 / scale
-	if state.fontId == fontstashmini.INVALID {
+	if state.fontID == fontstashmini.INVALID {
 		return 0
 	}
 
@@ -869,7 +874,7 @@ func (c *Context) TextRune(x, y float32, runes []rune) float32 {
 	c.fs.SetSpacing(state.letterSpacing * scale)
 	c.fs.SetBlur(state.fontBlur * scale)
 	c.fs.SetAlign(fontstashmini.FONSAlign(state.textAlign))
-	c.fs.SetFont(state.fontId)
+	c.fs.SetFont(state.fontID)
 
 	vertexCount := maxI(2, len(runes)) * 6 // conservative estimate.
 	vertexes := c.cache.allocVertexes(vertexCount)
@@ -921,13 +926,13 @@ func (c *Context) TextRune(x, y float32, runes []rune) float32 {
 	return iter.X
 }
 
-// Draws multi-line text string at specified location wrapped at the specified width. If end is specified only the sub-string up to the end is drawn.
+// TextBox draws multi-line text string at specified location wrapped at the specified width. If end is specified only the sub-string up to the end is drawn.
 // White space is stripped at the beginning of the rows, the text is split at word boundaries or when new-line characters are encountered.
 // Words longer than the max width are slit at nearest character (i.e. no hyphenation).
 // Draws text string at specified location. If end is specified only the sub-string up to the end is drawn.
 func (c *Context) TextBox(x, y, breakRowWidth float32, str string) {
 	state := c.getState()
-	if state.fontId == fontstashmini.INVALID {
+	if state.fontID == fontstashmini.INVALID {
 		return
 	}
 	runes := []rune(str)
@@ -935,15 +940,15 @@ func (c *Context) TextBox(x, y, breakRowWidth float32, str string) {
 	oldAlign := state.textAlign
 
 	var hAlign Align
-	if state.textAlign&ALIGN_LEFT != 0 {
-		hAlign = ALIGN_LEFT
-	} else if state.textAlign&ALIGN_CENTER != 0 {
-		hAlign = ALIGN_CENTER
-	} else if state.textAlign&ALIGN_RIGHT != 0 {
-		hAlign = ALIGN_RIGHT
+	if state.textAlign&AlignLeft != 0 {
+		hAlign = AlignLeft
+	} else if state.textAlign&AlignCenter != 0 {
+		hAlign = AlignCenter
+	} else if state.textAlign&AlignRight != 0 {
+		hAlign = AlignRight
 	}
-	vAlign := state.textAlign & (ALIGN_TOP | ALIGN_MIDDLE | ALIGN_BOTTOM | ALIGN_BASELINE)
-	state.textAlign = ALIGN_LEFT | vAlign
+	vAlign := state.textAlign & (AlignTop | AlignMiddle | AlignBottom | AlignBaseline)
+	state.textAlign = AlignLeft | vAlign
 
 	_, _, lineH := c.TextMetrics()
 
@@ -952,18 +957,18 @@ func (c *Context) TextBox(x, y, breakRowWidth float32, str string) {
 	for _, row := range c.TextBreakLinesRune(runes, breakRowWidth) {
 		text := string(runes[row.StartIndex:row.EndIndex])
 		switch hAlign {
-		case ALIGN_LEFT:
+		case AlignLeft:
 			c.Text(x, y, text)
-		case ALIGN_CENTER:
+		case AlignCenter:
 			c.Text(x+breakRowWidth*0.5-row.Width*0.5, y, text)
-		case ALIGN_RIGHT:
+		case AlignRight:
 			c.Text(x+breakRowWidth-row.Width, y, text)
 		}
 		y += lineH * state.lineHeight
 	}
 }
 
-// Measures the specified text string. Parameter bounds should be a pointer to float[4],
+// TextBounds measures the specified text string. Parameter bounds should be a pointer to float[4],
 // if the bounding box of the text should be returned. The bounds value are [xmin,ymin, xmax,ymax]
 // Returns the horizontal advance of the measured text (i.e. where the next character should drawn).
 // Measured values are returned in local coordinate space.
@@ -971,7 +976,7 @@ func (c *Context) TextBounds(x, y float32, str string) (float32, []float32) {
 	state := c.getState()
 	scale := state.getFontScale() * c.devicePxRatio
 	invScale := 1.0 / scale
-	if state.fontId == fontstashmini.INVALID {
+	if state.fontID == fontstashmini.INVALID {
 		return 0, nil
 	}
 
@@ -979,7 +984,7 @@ func (c *Context) TextBounds(x, y float32, str string) (float32, []float32) {
 	c.fs.SetSpacing(state.letterSpacing * scale)
 	c.fs.SetBlur(state.fontBlur * scale)
 	c.fs.SetAlign(fontstashmini.FONSAlign(state.textAlign))
-	c.fs.SetFont(state.fontId)
+	c.fs.SetFont(state.fontID)
 
 	width, bounds := c.fs.TextBounds(x*scale, y*scale, str)
 	if bounds != nil {
@@ -992,12 +997,12 @@ func (c *Context) TextBounds(x, y float32, str string) (float32, []float32) {
 	return width * invScale, bounds
 }
 
-// Measures the specified multi-text string. Parameter bounds should be a pointer to float[4],
+// TextBoxBounds measures the specified multi-text string. Parameter bounds should be a pointer to float[4],
 // if the bounding box of the text should be returned. The bounds value are [xmin,ymin, xmax,ymax]
 // Measured values are returned in local coordinate space.
 func (c *Context) TextBoxBounds(x, y, breakRowWidth float32, str string) [4]float32 {
 	state := c.getState()
-	if state.fontId == fontstashmini.INVALID {
+	if state.fontID == fontstashmini.INVALID {
 		return [4]float32{}
 	}
 	runes := []rune(str)
@@ -1007,15 +1012,15 @@ func (c *Context) TextBoxBounds(x, y, breakRowWidth float32, str string) [4]floa
 	oldAlign := state.textAlign
 
 	var hAlign Align
-	if state.textAlign&ALIGN_LEFT != 0 {
-		hAlign = ALIGN_LEFT
-	} else if state.textAlign&ALIGN_CENTER != 0 {
-		hAlign = ALIGN_CENTER
-	} else if state.textAlign&ALIGN_RIGHT != 0 {
-		hAlign = ALIGN_RIGHT
+	if state.textAlign&AlignLeft != 0 {
+		hAlign = AlignLeft
+	} else if state.textAlign&AlignCenter != 0 {
+		hAlign = AlignCenter
+	} else if state.textAlign&AlignRight != 0 {
+		hAlign = AlignRight
 	}
-	vAlign := state.textAlign & (ALIGN_TOP | ALIGN_MIDDLE | ALIGN_BOTTOM | ALIGN_BASELINE)
-	state.textAlign = ALIGN_LEFT | vAlign
+	vAlign := state.textAlign & (AlignTop | AlignMiddle | AlignBottom | AlignBaseline)
+	state.textAlign = AlignLeft | vAlign
 
 	minX := x
 	minY := y
@@ -1037,11 +1042,11 @@ func (c *Context) TextBoxBounds(x, y, breakRowWidth float32, str string) [4]floa
 		var dx float32
 		// Horizontal bounds
 		switch hAlign {
-		case ALIGN_LEFT:
+		case AlignLeft:
 			dx = 0
-		case ALIGN_CENTER:
+		case AlignCenter:
 			dx = breakRowWidth*0.5 - row.Width*0.5
-		case ALIGN_RIGHT:
+		case AlignRight:
 			dx = breakRowWidth - row.Width
 		}
 		rMinX := x + row.MinX + dx
@@ -1059,17 +1064,18 @@ func (c *Context) TextBoxBounds(x, y, breakRowWidth float32, str string) [4]floa
 	return [4]float32{minX, minY, maxX, maxY}
 }
 
-// Calculates the glyph x positions of the specified text. If end is specified only the sub-string will be used.
+// TextGlyphPositions calculates the glyph x positions of the specified text. If end is specified only the sub-string will be used.
 // Measured values are returned in local coordinate space.
 func (c *Context) TextGlyphPositions(x, y float32, str string) []GlyphPosition {
 	return c.TextGlyphPositionsRune(x, y, []rune(str))
 }
 
+// TextGlyphPositionsRune is an alternate version of TextGlyphPositions that accepts rune slice
 func (c *Context) TextGlyphPositionsRune(x, y float32, runes []rune) []GlyphPosition {
 	state := c.getState()
 	scale := state.getFontScale() * c.devicePxRatio
 	invScale := 1.0 / scale
-	if state.fontId == fontstashmini.INVALID {
+	if state.fontID == fontstashmini.INVALID {
 		return nil
 	}
 
@@ -1077,7 +1083,7 @@ func (c *Context) TextGlyphPositionsRune(x, y float32, runes []rune) []GlyphPosi
 	c.fs.SetSpacing(state.letterSpacing * scale)
 	c.fs.SetBlur(state.fontBlur * scale)
 	c.fs.SetAlign(fontstashmini.FONSAlign(state.textAlign))
-	c.fs.SetFont(state.fontId)
+	c.fs.SetFont(state.fontID)
 
 	positions := make([]GlyphPosition, 0, len(runes))
 
@@ -1105,13 +1111,13 @@ func (c *Context) TextGlyphPositionsRune(x, y float32, runes []rune) []GlyphPosi
 	return positions
 }
 
-// Returns the vertical metrics based on the current text style.
+// TextMetrics returns the vertical metrics based on the current text style.
 // Measured values are returned in local coordinate space.
 func (c *Context) TextMetrics() (float32, float32, float32) {
 	state := c.getState()
 	scale := state.getFontScale() * c.devicePxRatio
 	invScale := 1.0 / scale
-	if state.fontId == fontstashmini.INVALID {
+	if state.fontID == fontstashmini.INVALID {
 		return 0, 0, 0
 	}
 
@@ -1119,41 +1125,42 @@ func (c *Context) TextMetrics() (float32, float32, float32) {
 	c.fs.SetSpacing(state.letterSpacing * scale)
 	c.fs.SetBlur(state.fontBlur * scale)
 	c.fs.SetAlign(fontstashmini.FONSAlign(state.textAlign))
-	c.fs.SetFont(state.fontId)
+	c.fs.SetFont(state.fontID)
 
 	ascender, descender, lineH := c.fs.VerticalMetrics()
 	return ascender * invScale, descender * invScale, lineH * invScale
 }
 
-// Breaks the specified text into lines. If end is specified only the sub-string will be used.
+// TextBreakLines breaks the specified text into lines. If end is specified only the sub-string will be used.
 // White space is stripped at the beginning of the rows, the text is split at word boundaries or when new-line characters are encountered.
 // Words longer than the max width are slit at nearest character (i.e. no hyphenation).
 func (c *Context) TextBreakLines(str string, breakRowWidth float32) []TextRow {
 	return c.TextBreakLinesRune([]rune(str), breakRowWidth)
 }
 
+// TextBreakLinesRune is an alternate version of TextBreakLines that accepts rune slice
 func (c *Context) TextBreakLinesRune(runes []rune, breakRowWidth float32) []TextRow {
 	state := c.getState()
 	scale := state.getFontScale() * c.devicePxRatio
 	invScale := 1.0 / scale
-	if state.fontId == fontstashmini.INVALID {
+	if state.fontID == fontstashmini.INVALID {
 		return nil
 	}
 
-	currentType := nvg_SPACE
-	prevType := nvg_CHAR
+	currentType := nvgSPACE
+	prevType := nvgCHAR
 
 	c.fs.SetSize(state.fontSize * scale)
 	c.fs.SetSpacing(state.letterSpacing * scale)
 	c.fs.SetBlur(state.fontBlur * scale)
 	c.fs.SetAlign(fontstashmini.FONSAlign(state.textAlign))
-	c.fs.SetFont(state.fontId)
+	c.fs.SetFont(state.fontID)
 
 	breakRowWidth *= scale
 
 	iter := c.fs.TextIterForRunes(0, 0, runes)
 	prevIter := iter
-	var prevCodePoint rune = 0
+	var prevCodePoint rune
 	var rows []TextRow
 
 	var rowStartX, rowWidth, rowMinX, rowMaxX, wordStartX, wordMinX, breakWidth, breakMaxX float32
@@ -1174,31 +1181,31 @@ func (c *Context) TextBreakLinesRune(runes []rune, breakRowWidth float32) []Text
 		prevIter = iter
 		switch iter.CodePoint {
 		case 9: // \t
-			currentType = nvg_SPACE
+			currentType = nvgSPACE
 		case 11: // \v
-			currentType = nvg_SPACE
+			currentType = nvgSPACE
 		case 12: // \f
-			currentType = nvg_SPACE
+			currentType = nvgSPACE
 		case 0x00a0: // NBSP
-			currentType = nvg_SPACE
+			currentType = nvgSPACE
 		case 10: // \n
 			if prevCodePoint == 13 {
-				currentType = nvg_NEWLINE
+				currentType = nvgNEWLINE
 			} else {
-				currentType = nvg_SPACE
+				currentType = nvgSPACE
 			}
 		case 13: // \r
 			if prevCodePoint == 13 {
-				currentType = nvg_NEWLINE
+				currentType = nvgNEWLINE
 			} else {
-				currentType = nvg_SPACE
+				currentType = nvgSPACE
 			}
 		case 0x0085: // NEL
-			currentType = nvg_NEWLINE
+			currentType = nvgNEWLINE
 		default:
-			currentType = nvg_CHAR
+			currentType = nvgCHAR
 		}
-		if currentType == nvg_NEWLINE {
+		if currentType == nvgNEWLINE {
 			// Always handle new lines.
 			tmpRowStart := rowStart
 			if rowStart == -1 {
@@ -1228,7 +1235,7 @@ func (c *Context) TextBreakLinesRune(runes []rune, breakRowWidth float32) []Text
 
 		} else {
 			if rowStart == -1 {
-				if currentType == nvg_CHAR {
+				if currentType == nvgCHAR {
 					// The current char is the row so far
 					rowStartX = iter.X
 					rowStart = iter.CurrentIndex
@@ -1247,25 +1254,25 @@ func (c *Context) TextBreakLinesRune(runes []rune, breakRowWidth float32) []Text
 			} else {
 				nextWidth := iter.NextX - rowStartX
 				// track last non-white space character
-				if currentType == nvg_CHAR {
+				if currentType == nvgCHAR {
 					rowEnd = iter.NextIndex
 					rowWidth = iter.NextX - rowStartX
 					rowMaxX = quad.X1 - rowStartX
 				}
 				// track last end of a word
-				if prevType == nvg_CHAR && currentType == nvg_SPACE {
+				if prevType == nvgCHAR && currentType == nvgSPACE {
 					breakEnd = iter.CurrentIndex
 					breakWidth = rowWidth
 					breakMaxX = rowMaxX
 				}
 				// track last beginning of a word
-				if prevType == nvg_SPACE && currentType == nvg_CHAR {
+				if prevType == nvgSPACE && currentType == nvgCHAR {
 					wordStart = iter.CurrentIndex
 					wordStartX = iter.X
 					wordMinX = quad.X0 - rowStartX
 				}
 				// Break to new line when a character is beyond break width.
-				if currentType == nvg_CHAR && nextWidth > breakRowWidth {
+				if currentType == nvgCHAR && nextWidth > breakRowWidth {
 					// The run length is too long, need to break to new line.
 					if breakEnd == rowStart {
 						// The current word is longer than the row length, just break it from here.
@@ -1334,13 +1341,13 @@ func (c *Context) TextBreakLinesRune(runes []rune, breakRowWidth float32) []Text
 func createInternal(params nvgParams) (*Context, error) {
 	context := &Context{
 		params:     params,
-		states:     make([]nvgState, 0, nvg_MAX_STATES),
-		fontImages: make([]int, nvg_MAX_FONTIMAGES),
-		commands:   make([]float32, 0, nvg_INIT_COMMANDS_SIZE),
+		states:     make([]nvgState, 0, nvgMaxStates),
+		fontImages: make([]int, nvgMaxFontImages),
+		commands:   make([]float32, 0, nvgInitCommandsSize),
 		cache: nvgPathCache{
-			points:   make([]nvgPoint, 0, nvg_INIT_POINTS_SIZE),
-			paths:    make([]nvgPath, 0, nvg_INIT_PATHS_SIZE),
-			vertexes: make([]nvgVertex, 0, nvg_INIT_VERTS_SIZE),
+			points:   make([]nvgPoint, 0, nvgInitPointsSize),
+			paths:    make([]nvgPath, 0, nvgInitPathsSize),
+			vertexes: make([]nvgVertex, 0, nvgInitVertsSize),
 		},
 	}
 	context.Save()
@@ -1348,9 +1355,9 @@ func createInternal(params nvgParams) (*Context, error) {
 	context.setDevicePixelRatio(1.0)
 	context.params.renderCreate()
 
-	context.fs = fontstashmini.New(nvg_INIT_FONTIMAGE_SIZE, nvg_INIT_FONTIMAGE_SIZE)
+	context.fs = fontstashmini.New(nvgInitFontImageSize, nvgInitFontImageSize)
 
-	context.fontImages[0] = context.params.renderCreateTexture(nvg_TEXTURE_ALPHA, nvg_INIT_FONTIMAGE_SIZE, nvg_INIT_FONTIMAGE_SIZE, 0, nil)
+	context.fontImages[0] = context.params.renderCreateTexture(nvgTextureALPHA, nvgInitFontImageSize, nvgInitFontImageSize, 0, nil)
 	context.fontImageIdx = 0
 
 	return context, nil
@@ -1370,7 +1377,7 @@ func (c *Context) getState() *nvgState {
 func (c *Context) appendCommand(vals []float32) {
 	xForm := c.getState().xform
 
-	if nvgCommands(vals[0]) != nvg_CLOSE && nvgCommands(vals[0]) != nvg_WINDING {
+	if nvgCommands(vals[0]) != nvgCLOSE && nvgCommands(vals[0]) != nvgWINDING {
 		c.commandX = vals[len(vals)-2]
 		c.commandY = vals[len(vals)-1]
 	}
@@ -1378,20 +1385,20 @@ func (c *Context) appendCommand(vals []float32) {
 	i := 0
 	for i < len(vals) {
 		switch nvgCommands(vals[i]) {
-		case nvg_MOVETO:
+		case nvgMOVETO:
 			vals[i+1], vals[i+2] = xForm.TransformPoint(vals[i+1], vals[i+2])
 			i += 3
-		case nvg_LINETO:
+		case nvgLINETO:
 			vals[i+1], vals[i+2] = xForm.TransformPoint(vals[i+1], vals[i+2])
 			i += 3
-		case nvg_BEZIERTO:
+		case nvgBEZIERTO:
 			vals[i+1], vals[i+2] = xForm.TransformPoint(vals[i+1], vals[i+2])
 			vals[i+3], vals[i+4] = xForm.TransformPoint(vals[i+3], vals[i+4])
 			vals[i+5], vals[i+6] = xForm.TransformPoint(vals[i+5], vals[i+6])
 			i += 7
-		case nvg_CLOSE:
+		case nvgCLOSE:
 			i++
-		case nvg_WINDING:
+		case nvgWINDING:
 			i += 2
 		default:
 			i++
@@ -1409,27 +1416,27 @@ func (c *Context) flattenPaths() {
 	i := 0
 	for i < len(c.commands) {
 		switch nvgCommands(c.commands[i]) {
-		case nvg_MOVETO:
+		case nvgMOVETO:
 			cache.addPath()
-			cache.addPoint(c.commands[i+1], c.commands[i+2], nvg_PT_CORNER, c.distTol)
+			cache.addPoint(c.commands[i+1], c.commands[i+2], nvgPtCORNER, c.distTol)
 			i += 3
-		case nvg_LINETO:
-			cache.addPoint(c.commands[i+1], c.commands[i+2], nvg_PT_CORNER, c.distTol)
+		case nvgLINETO:
+			cache.addPoint(c.commands[i+1], c.commands[i+2], nvgPtCORNER, c.distTol)
 			i += 3
-		case nvg_BEZIERTO:
+		case nvgBEZIERTO:
 			last := cache.lastPoint()
 			if last != nil {
 				cache.tesselateBezier(
 					last.x, last.y,
 					c.commands[i+1], c.commands[i+2],
 					c.commands[i+3], c.commands[i+4],
-					c.commands[i+5], c.commands[i+6], 0, nvg_PT_CORNER, c.tessTol, c.distTol)
+					c.commands[i+5], c.commands[i+6], 0, nvgPtCORNER, c.tessTol, c.distTol)
 			}
 			i += 7
-		case nvg_CLOSE:
+		case nvgCLOSE:
 			cache.closePath()
 			i++
-		case nvg_WINDING:
+		case nvgWINDING:
 			cache.pathWinding(Winding(c.commands[i+1]))
 			i += 2
 		default:
@@ -1455,9 +1462,9 @@ func (c *Context) flattenPaths() {
 		// Enforce winding.
 		if path.count > 2 {
 			area := polyArea(points, path.count)
-			if path.winding == SOLID && area < 0.0 {
+			if path.winding == Solid && area < 0.0 {
 				polyReverse(points, path.count)
-			} else if path.winding == HOLE && area > 0.0 {
+			} else if path.winding == Hole && area > 0.0 {
 				polyReverse(points, path.count)
 			}
 		}
@@ -1499,7 +1506,7 @@ func (c *Context) flushTextTexture() {
 
 func (c *Context) allocTextAtlas() bool {
 	c.flushTextTexture()
-	if c.fontImageIdx >= nvg_MAX_FONTIMAGES-1 {
+	if c.fontImageIdx >= nvgMaxFontImages-1 {
 		return false
 	}
 	var iw, ih int
@@ -1513,11 +1520,11 @@ func (c *Context) allocTextAtlas() bool {
 		} else {
 			iw *= 2
 		}
-		if iw > nvg_MAX_FONTIMAGE_SIZE || ih > nvg_MAX_FONTIMAGE_SIZE {
-			iw = nvg_MAX_FONTIMAGE_SIZE
-			ih = nvg_MAX_FONTIMAGE_SIZE
+		if iw > nvgMaxFontImageSize || ih > nvgMaxFontImageSize {
+			iw = nvgMaxFontImageSize
+			ih = nvgMaxFontImageSize
 		}
-		c.fontImages[c.fontImageIdx+1] = c.params.renderCreateTexture(nvg_TEXTURE_ALPHA, iw, ih, 0, nil)
+		c.fontImages[c.fontImageIdx+1] = c.params.renderCreateTexture(nvgTextureALPHA, iw, ih, 0, nil)
 	}
 	c.fontImageIdx++
 	c.fs.ResetAtlas(iw, ih)

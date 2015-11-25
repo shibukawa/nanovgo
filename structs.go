@@ -69,7 +69,7 @@ type nvgState struct {
 	lineHeight    float32
 	fontBlur      float32
 	textAlign     Align
-	fontId        int
+	fontID        int
 }
 
 func (s *nvgState) reset() {
@@ -77,8 +77,8 @@ func (s *nvgState) reset() {
 	s.stroke.setPaintColor(RGBA(0, 0, 0, 255))
 	s.strokeWidth = 1.0
 	s.miterLimit = 10.0
-	s.lineCap = BUTT
-	s.lineJoin = MITER
+	s.lineCap = Butt
+	s.lineJoin = Miter
 	s.alpha = 1.0
 	s.xform = IdentityMatrix()
 	s.scissor.xform = IdentityMatrix()
@@ -91,8 +91,8 @@ func (s *nvgState) reset() {
 	s.letterSpacing = 0.0
 	s.lineHeight = 1.0
 	s.fontBlur = 0.0
-	s.textAlign = ALIGN_LEFT | ALIGN_BASELINE
-	s.fontId = fontstashmini.INVALID
+	s.textAlign = AlignLeft | AlignBaseline
+	s.fontID = fontstashmini.INVALID
 }
 
 func (s *nvgState) getFontScale() float32 {
@@ -126,7 +126,7 @@ func (c *nvgPathCache) lastPath() *nvgPath {
 }
 
 func (c *nvgPathCache) addPath() {
-	c.paths = append(c.paths, nvgPath{first: len(c.points), winding: SOLID})
+	c.paths = append(c.paths, nvgPath{first: len(c.points), winding: Solid})
 }
 
 func (c *nvgPathCache) lastPoint() *nvgPoint {
@@ -205,7 +205,7 @@ func (c *nvgPathCache) tesselateBezier(x1, y1, x2, y2, x3, y3, x4, y4 float32, l
 }
 
 func (c *nvgPathCache) calculateJoins(w float32, lineJoin LineCap, miterLimit float32) {
-	var iw float32 = 0.0
+	var iw float32
 	if w > 0.0 {
 		iw = 1.0 / w
 	}
@@ -236,8 +236,8 @@ func (c *nvgPathCache) calculateJoins(w float32, lineJoin LineCap, miterLimit fl
 			}
 
 			// Clear flags, but keep the corner.
-			if p1.flags&nvg_PT_CORNER != 0 {
-				p1.flags = nvg_PT_CORNER
+			if p1.flags&nvgPtCORNER != 0 {
+				p1.flags = nvgPtCORNER
 			} else {
 				p1.flags = 0
 			}
@@ -246,23 +246,23 @@ func (c *nvgPathCache) calculateJoins(w float32, lineJoin LineCap, miterLimit fl
 			cross := p1.dx*p0.dy - p0.dx*p1.dy
 			if cross > 0.0 {
 				nLeft++
-				p1.flags |= nvg_PT_LEFT
+				p1.flags |= nvgPtLEFT
 			}
 
 			// Calculate if we should use bevel or miter for inner join.
 			limit := maxF(1.0, minF(p0.len, p1.len)*iw)
 			if dmr2*limit*limit < 1.0 {
-				p1.flags |= nvg_PR_INNERBEVEL
+				p1.flags |= nvgPrINNERBEVEL
 			}
 
 			// Check to see if the corner needs to be beveled.
-			if p1.flags&nvg_PT_CORNER != 0 {
-				if dmr2*miterLimit*miterLimit < 1.0 || lineJoin == BEVEL || lineJoin == ROUND {
-					p1.flags |= nvg_PT_BEVEL
+			if p1.flags&nvgPtCORNER != 0 {
+				if dmr2*miterLimit*miterLimit < 1.0 || lineJoin == Bevel || lineJoin == Round {
+					p1.flags |= nvgPtBEVEL
 				}
 			}
 
-			if p1.flags&(nvg_PT_BEVEL|nvg_PR_INNERBEVEL) != 0 {
+			if p1.flags&(nvgPtBEVEL|nvgPrINNERBEVEL) != 0 {
 				path.nBevel++
 			}
 
@@ -286,14 +286,14 @@ func (c *nvgPathCache) expandStroke(w float32, lineCap, lineJoin LineCap, miterL
 	countVertex := 0
 	for i := 0; i < len(c.paths); i++ {
 		path := &c.paths[i]
-		if lineJoin == ROUND {
+		if lineJoin == Round {
 			countVertex += (path.count + path.nBevel*(nCap+2) + 1) * 2 // plus one for loop
 		} else {
 			countVertex += (path.count + path.nBevel*5 + 1) * 2 // plus one for loop
 		}
 		if !path.closed {
 			// space for caps
-			if lineCap == ROUND {
+			if lineCap == Round {
 				countVertex += (nCap*2 + 2) * 2
 			} else {
 				countVertex += (3 + 3) * 2
@@ -333,18 +333,18 @@ func (c *nvgPathCache) expandStroke(w float32, lineCap, lineJoin LineCap, miterL
 			dy := p1.y - p0.y
 			_, dx, dy = normalize(dx, dy)
 			switch lineCap {
-			case BUTT:
+			case Butt:
 				index = buttCapStart(dst, index, p0, dx, dy, w, -aa*0.5, aa)
-			case SQUARE:
+			case Square:
 				index = buttCapStart(dst, index, p0, dx, dy, w, w-aa, aa)
-			case ROUND:
+			case Round:
 				index = roundCapStart(dst, index, p0, dx, dy, w, nCap, aa)
 			}
 		}
 
 		for j := s; j < e; j++ {
-			if p1.flags&(nvg_PT_BEVEL|nvg_PR_INNERBEVEL) != 0 {
-				if lineJoin == ROUND {
+			if p1.flags&(nvgPtBEVEL|nvgPrINNERBEVEL) != 0 {
+				if lineJoin == Round {
 					index = roundJoin(dst, index, p0, p1, w, w, 0, 1, nCap, aa)
 				} else {
 					index = bevelJoin(dst, index, p0, p1, w, w, 0, 1, aa)
@@ -370,11 +370,11 @@ func (c *nvgPathCache) expandStroke(w float32, lineCap, lineJoin LineCap, miterL
 			dy := p1.y - p0.y
 			_, dx, dy = normalize(dx, dy)
 			switch lineCap {
-			case BUTT:
+			case Butt:
 				index = buttCapEnd(dst, index, p1, dx, dy, w, -aa*0.5, aa)
-			case SQUARE:
+			case Square:
 				index = buttCapEnd(dst, index, p1, dx, dy, w, w-aa, aa)
-			case ROUND:
+			case Round:
 				index = roundCapEnd(dst, index, p1, dx, dy, w, nCap, aa)
 			}
 		}
@@ -416,12 +416,12 @@ func (c *nvgPathCache) expandFill(w float32, lineJoin LineCap, miterLimit, fring
 			p1 := &points[0]
 			p1Index := 0
 			for j := 0; j < path.count; j++ {
-				if p1.flags&nvg_PT_BEVEL != 0 {
+				if p1.flags&nvgPtBEVEL != 0 {
 					dlx0 := p0.dy
 					dly0 := -p0.dx
 					dlx1 := p1.dy
 					dly1 := -p1.dx
-					if p1.flags&nvg_PT_LEFT != 0 {
+					if p1.flags&nvgPtLEFT != 0 {
 						lx := p1.x + p1.dmx*wOff
 						ly := p1.y + p1.dmy*wOff
 						(&dst[index]).set(lx, ly, 0.5, 1)
@@ -462,7 +462,7 @@ func (c *nvgPathCache) expandFill(w float32, lineJoin LineCap, miterLimit, fring
 		if fringe {
 			lw := w + wOff
 			rw := w - wOff
-			var lu float32 = 0.0
+			var lu float32
 			var ru float32 = 1.0
 
 			// Create only half a fringe for convex shapes so that
@@ -478,7 +478,7 @@ func (c *nvgPathCache) expandFill(w float32, lineJoin LineCap, miterLimit, fring
 
 			// Looping
 			for j := 0; j < path.count; j++ {
-				if p1.flags&(nvg_PT_BEVEL|nvg_PR_INNERBEVEL) != 0 {
+				if p1.flags&(nvgPtBEVEL|nvgPrINNERBEVEL) != 0 {
 					index = bevelJoin(dst, index, p0, p1, lw, rw, lu, ru, fringeWidth)
 				} else {
 					(&dst[index]).set(p1.x+(p1.dmx*lw), p1.y+(p1.dmy*lw), lu, 1)
@@ -504,6 +504,7 @@ func (c *nvgPathCache) expandFill(w float32, lineJoin LineCap, miterLimit, fring
 	}
 }
 
+// GlyphPosition keeps glyph location information
 type GlyphPosition struct {
 	Index      int // Position of the glyph in the input string.
 	Runes      []rune
@@ -511,6 +512,7 @@ type GlyphPosition struct {
 	MinX, MaxX float32 // The bounds of the glyph shape.
 }
 
+// TextRow keeps row geometry information
 type TextRow struct {
 	Runes      []rune  // The input string.
 	StartIndex int     // Index to the input text where the row starts.

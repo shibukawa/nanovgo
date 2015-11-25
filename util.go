@@ -4,10 +4,12 @@ import (
 	"math"
 )
 
+// DegToRad converts degree to radian.
 func DegToRad(deg float32) float32 {
 	return deg / 180.0 * PI
 }
 
+// RadToDeg converts radian to degree.
 func RadToDeg(rad float32) float32 {
 	return rad / PI * 180.0
 }
@@ -15,9 +17,8 @@ func RadToDeg(rad float32) float32 {
 func signF(a float32) float32 {
 	if a > 0.0 {
 		return 1.0
-	} else {
-		return -1.0
 	}
+	return -1.0
 }
 
 func clampF(a, min, max float32) float32 {
@@ -42,10 +43,9 @@ func clampI(a, min, max int) int {
 
 func hue(h, m1, m2 float32) float32 {
 	if h < 0.0 {
-		h += 1
-	}
-	if h > 1 {
-		h -= 1
+		h++
+	} else if h > 1 {
+		h--
 	}
 	if h < 1.0/6.0 {
 		return m1 + (m2-m1)*h*6.0
@@ -166,7 +166,7 @@ func triArea2(ax, ay, bx, by, cx, cy float32) float32 {
 }
 
 func polyArea(points []nvgPoint, npts int) float32 {
-	var area float32 = 0.0
+	var area float32
 	a := &points[0]
 	for i := 2; i < npts; i++ {
 		b := &points[i-1]
@@ -211,8 +211,8 @@ func roundJoin(dst []nvgVertex, index int, p0, p1 *nvgPoint, lw, rw, lu, ru floa
 	dly0 := -p0.dx
 	dlx1 := p1.dy
 	dly1 := -p1.dx
-	isInnerBevel := p1.flags&nvg_PR_INNERBEVEL != 0
-	if p1.flags&nvg_PT_LEFT != 0 {
+	isInnerBevel := p1.flags&nvgPrINNERBEVEL != 0
+	if p1.flags&nvgPtLEFT != 0 {
 		lx0, ly0, lx1, ly1 := chooseBevel(isInnerBevel, p0, p1, lw)
 		a0 := atan2F(-dly0, -dlx0)
 		a1 := atan2F(-dly1, -dlx1)
@@ -269,9 +269,9 @@ func bevelJoin(dst []nvgVertex, index int, p0, p1 *nvgPoint, lw, rw, lu, ru, fri
 	dly0 := -p0.dx
 	dlx1 := p1.dy
 	dly1 := -p1.dx
-	isInnerBevel := p1.flags&nvg_PR_INNERBEVEL != 0
-	isBevel := p1.flags&nvg_PT_BEVEL != 0
-	if p1.flags&nvg_PT_LEFT != 0 {
+	isInnerBevel := p1.flags&nvgPrINNERBEVEL != 0
+	isBevel := p1.flags&nvgPtBEVEL != 0
+	if p1.flags&nvgPtLEFT != 0 {
 		lx0, ly0, lx1, ly1 := chooseBevel(isInnerBevel, p0, p1, lw)
 
 		(&dst[index]).set(lx0, ly0, lu, 1)

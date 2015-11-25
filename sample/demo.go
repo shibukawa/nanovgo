@@ -9,6 +9,7 @@ import (
 	"strconv"
 )
 
+// DemoData keeps font and image handlers
 type DemoData struct {
 	fontNormal, fontBold, fontIcons int
 	images                          []int
@@ -101,7 +102,7 @@ func drawWindow(ctx *nanovgo.Context, title string, x, y, w, h float32) {
 	ctx.BeginPath()
 	ctx.Rect(x-10, y-10, w+20, h+30)
 	ctx.RoundedRect(x, y, w, h, cornerRadius)
-	ctx.PathWinding(nanovgo.HOLE)
+	ctx.PathWinding(nanovgo.Hole)
 	ctx.SetFillPaint(shadowPaint)
 	ctx.Fill()
 
@@ -119,7 +120,7 @@ func drawWindow(ctx *nanovgo.Context, title string, x, y, w, h float32) {
 
 	ctx.SetFontSize(18.0)
 	ctx.SetFontFace("sans-bold")
-	ctx.SetTextAlign(nanovgo.ALIGN_CENTER | nanovgo.ALIGN_MIDDLE)
+	ctx.SetTextAlign(nanovgo.AlignCenter | nanovgo.AlignMiddle)
 
 	ctx.SetFontBlur(2)
 	ctx.SetFillColor(nanovgo.RGBA(0, 0, 0, 128))
@@ -148,21 +149,21 @@ func drawSearchBox(ctx *nanovgo.Context, text string, x, y, w, h float32) {
 	ctx.SetFontSize(h * 1.3)
 	ctx.SetFontFace("icons")
 	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 64))
-	ctx.SetTextAlign(nanovgo.ALIGN_CENTER | nanovgo.ALIGN_MIDDLE)
-	ctx.Text(x+h*0.55, y+h*0.55, cpToUTF8(ICON_SEARCH))
+	ctx.SetTextAlign(nanovgo.AlignCenter | nanovgo.AlignMiddle)
+	ctx.Text(x+h*0.55, y+h*0.55, cpToUTF8(iconSEARCH))
 
 	ctx.SetFontSize(20.0)
 	ctx.SetFontFace("sans")
 	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 32))
 
-	ctx.SetTextAlign(nanovgo.ALIGN_LEFT | nanovgo.ALIGN_MIDDLE)
+	ctx.SetTextAlign(nanovgo.AlignLeft | nanovgo.AlignMiddle)
 	ctx.Text(x+h*1.05, y+h*0.5, text)
 
 	ctx.SetFontSize(h * 1.3)
 	ctx.SetFontFace("icons")
 	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 32))
-	ctx.SetTextAlign(nanovgo.ALIGN_CENTER | nanovgo.ALIGN_MIDDLE)
-	ctx.Text(x+w-h*0.55, y+h*0.55, cpToUTF8(ICON_CIRCLED_CROSS))
+	ctx.SetTextAlign(nanovgo.AlignCenter | nanovgo.AlignMiddle)
+	ctx.Text(x+w-h*0.55, y+h*0.55, cpToUTF8(iconCIRCLEDCROSS))
 }
 
 func drawDropDown(ctx *nanovgo.Context, text string, x, y, w, h float32) {
@@ -183,14 +184,14 @@ func drawDropDown(ctx *nanovgo.Context, text string, x, y, w, h float32) {
 	ctx.SetFontSize(20.0)
 	ctx.SetFontFace("sans")
 	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 160))
-	ctx.SetTextAlign(nanovgo.ALIGN_LEFT | nanovgo.ALIGN_MIDDLE)
+	ctx.SetTextAlign(nanovgo.AlignLeft | nanovgo.AlignMiddle)
 	ctx.Text(x+h*0.3, y+h*0.5, text)
 
 	ctx.SetFontSize(h * 1.3)
 	ctx.SetFontFace("icons")
 	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 64))
-	ctx.SetTextAlign(nanovgo.ALIGN_CENTER | nanovgo.ALIGN_MIDDLE)
-	ctx.Text(x+w-h*0.5, y+h*0.5, cpToUTF8(ICON_CHEVRON_RIGHT))
+	ctx.SetTextAlign(nanovgo.AlignCenter | nanovgo.AlignMiddle)
+	ctx.Text(x+w-h*0.5, y+h*0.5, cpToUTF8(iconCHEVRONRIGHT))
 }
 
 func drawEditBoxBase(ctx *nanovgo.Context, x, y, w, h float32) {
@@ -214,7 +215,7 @@ func drawEditBox(ctx *nanovgo.Context, text string, x, y, w, h float32) {
 	ctx.SetFontSize(20.0)
 	ctx.SetFontFace("sans")
 	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 64))
-	ctx.SetTextAlign(nanovgo.ALIGN_LEFT | nanovgo.ALIGN_MIDDLE)
+	ctx.SetTextAlign(nanovgo.AlignLeft | nanovgo.AlignMiddle)
 	ctx.Text(x+h*0.3, y+h*0.5, text)
 }
 
@@ -224,7 +225,7 @@ func drawLabel(ctx *nanovgo.Context, text string, x, y, w, h float32) {
 	ctx.SetFontFace("sans")
 	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 128))
 
-	ctx.SetTextAlign(nanovgo.ALIGN_LEFT | nanovgo.ALIGN_MIDDLE)
+	ctx.SetTextAlign(nanovgo.AlignLeft | nanovgo.AlignMiddle)
 	ctx.Text(x, y+h*0.5, text)
 }
 
@@ -236,13 +237,13 @@ func drawEditBoxNum(ctx *nanovgo.Context, text, units string, x, y, w, h float32
 	ctx.SetFontSize(18.0)
 	ctx.SetFontFace("sans")
 	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 64))
-	ctx.SetTextAlign(nanovgo.ALIGN_RIGHT | nanovgo.ALIGN_MIDDLE)
+	ctx.SetTextAlign(nanovgo.AlignRight | nanovgo.AlignMiddle)
 	ctx.Text(x+w-h*0.3, y+h*0.5, units)
 
 	ctx.SetFontSize(20.0)
 	ctx.SetFontFace("sans")
 	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 128))
-	ctx.SetTextAlign(nanovgo.ALIGN_RIGHT | nanovgo.ALIGN_MIDDLE)
+	ctx.SetTextAlign(nanovgo.AlignRight | nanovgo.AlignMiddle)
 	ctx.Text(x+w-uw-h*0.5, y+h*0.5, text)
 }
 
@@ -252,7 +253,7 @@ func drawCheckBox(ctx *nanovgo.Context, text string, x, y, w, h float32) {
 	ctx.SetFontFace("sans")
 	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 160))
 
-	ctx.SetTextAlign(nanovgo.ALIGN_LEFT | nanovgo.ALIGN_MIDDLE)
+	ctx.SetTextAlign(nanovgo.AlignLeft | nanovgo.AlignMiddle)
 	ctx.Text(x+28, y+h*0.5, text)
 
 	bg := nanovgo.BoxGradient(x+1, y+float32(int(h*0.5))-9+1, 18, 18, 3, 3, nanovgo.RGBA(0, 0, 0, 32), nanovgo.RGBA(0, 0, 0, 92))
@@ -264,8 +265,8 @@ func drawCheckBox(ctx *nanovgo.Context, text string, x, y, w, h float32) {
 	ctx.SetFontSize(40)
 	ctx.SetFontFace("icons")
 	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 128))
-	ctx.SetTextAlign(nanovgo.ALIGN_CENTER | nanovgo.ALIGN_MIDDLE)
-	ctx.Text(x+9+2, y+h*0.5, cpToUTF8(ICON_CHECK))
+	ctx.SetTextAlign(nanovgo.AlignCenter | nanovgo.AlignMiddle)
+	ctx.Text(x+9+2, y+h*0.5, cpToUTF8(iconCHECK))
 }
 
 func drawButton(ctx *nanovgo.Context, preicon int, text string, x, y, w, h float32, col nanovgo.Color) {
@@ -303,13 +304,13 @@ func drawButton(ctx *nanovgo.Context, preicon int, text string, x, y, w, h float
 		iw += h * 0.15
 
 		ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 96))
-		ctx.SetTextAlign(nanovgo.ALIGN_LEFT | nanovgo.ALIGN_MIDDLE)
+		ctx.SetTextAlign(nanovgo.AlignLeft | nanovgo.AlignMiddle)
 		ctx.Text(x+w*0.5-tw*0.5-iw*0.75, y+h*0.5, cpToUTF8(preicon))
 	}
 
 	ctx.SetFontSize(20.0)
 	ctx.SetFontFace("sans-bold")
-	ctx.SetTextAlign(nanovgo.ALIGN_LEFT | nanovgo.ALIGN_MIDDLE)
+	ctx.SetTextAlign(nanovgo.AlignLeft | nanovgo.AlignMiddle)
 	ctx.SetFillColor(nanovgo.RGBA(0, 0, 0, 160))
 	ctx.Text(x+w*0.5-tw*0.5+iw*0.25, y+h*0.5-1, text)
 	ctx.SetFillColor(nanovgo.RGBA(255, 255, 255, 160))
@@ -317,8 +318,8 @@ func drawButton(ctx *nanovgo.Context, preicon int, text string, x, y, w, h float
 }
 
 func drawSlider(ctx *nanovgo.Context, pos, x, y, w, h float32) {
-	var cy float32 = y + float32(int(h*0.5))
-	var kr float32 = float32(int(h * 0.25))
+	cy := y + float32(int(h*0.5))
+	kr := float32(int(h * 0.25))
 
 	ctx.Save()
 	defer ctx.Restore()
@@ -336,7 +337,7 @@ func drawSlider(ctx *nanovgo.Context, pos, x, y, w, h float32) {
 	ctx.BeginPath()
 	ctx.Rect(x+float32(int(pos*w))-kr-5, cy-kr-5, kr*2+5+5, kr*2+5+5+3)
 	ctx.Circle(x+float32(int(pos*w)), cy, kr)
-	ctx.PathWinding(nanovgo.HOLE)
+	ctx.PathWinding(nanovgo.Hole)
 	ctx.SetFillPaint(bg)
 	ctx.Fill()
 
@@ -522,8 +523,8 @@ func drawSpinner(ctx *nanovgo.Context, cx, cy, r, t float32) {
 	defer ctx.Restore()
 
 	ctx.BeginPath()
-	ctx.Arc(cx, cy, r0, a0, a1, nanovgo.CW)
-	ctx.Arc(cx, cy, r1, a1, a0, nanovgo.CCW)
+	ctx.Arc(cx, cy, r0, a0, a1, nanovgo.Clockwise)
+	ctx.Arc(cx, cy, r1, a1, a0, nanovgo.CounterClockwise)
 	ctx.ClosePath()
 	ax := cx + cosF(a0)*(r0+r1)*0.5
 	ay := cy + sinF(a0)*(r0+r1)*0.5
@@ -551,7 +552,7 @@ func drawThumbnails(ctx *nanovgo.Context, x, y, w, h float32, images []int, t fl
 	ctx.BeginPath()
 	ctx.Rect(x-10, y-10, w+20, h+30)
 	ctx.RoundedRect(x, y, w, h, cornerRadius)
-	ctx.PathWinding(nanovgo.HOLE)
+	ctx.PathWinding(nanovgo.Hole)
 	ctx.SetFillPaint(shadowPaint)
 	ctx.Fill()
 
@@ -570,12 +571,12 @@ func drawThumbnails(ctx *nanovgo.Context, x, y, w, h float32, images []int, t fl
 
 		dv := 1.0 / float32(len(images)-1)
 
-		for i, imageId := range images {
+		for i, imageID := range images {
 			tx := x + 10.0
 			ty := y + 10.0
 			tx += float32(i%2) * (thumb + 10.0)
 			ty += float32(i/2) * (thumb + 10.0)
-			imgW, imgH, _ := ctx.ImageSize(imageId)
+			imgW, imgH, _ := ctx.ImageSize(imageID)
 			var iw, ih, ix, iy float32
 			if imgW < imgH {
 				iw = thumb
@@ -596,7 +597,7 @@ func drawThumbnails(ctx *nanovgo.Context, x, y, w, h float32, images []int, t fl
 				drawSpinner(ctx, tx+thumb/2, ty+thumb/2, thumb*0.25, t)
 			}
 
-			imgPaint := nanovgo.ImagePattern(tx+ix, ty+iy, iw, ih, 0.0/180.0*nanovgo.PI, imageId, a)
+			imgPaint := nanovgo.ImagePattern(tx+ix, ty+iy, iw, ih, 0.0/180.0*nanovgo.PI, imageID, a)
 			ctx.BeginPath()
 			ctx.RoundedRect(tx, ty, thumb, thumb, 5)
 			ctx.SetFillPaint(imgPaint)
@@ -606,7 +607,7 @@ func drawThumbnails(ctx *nanovgo.Context, x, y, w, h float32, images []int, t fl
 			ctx.BeginPath()
 			ctx.Rect(tx-5, ty-5, thumb+10, thumb+10)
 			ctx.RoundedRect(tx, ty, thumb, thumb, 6)
-			ctx.PathWinding(nanovgo.HOLE)
+			ctx.PathWinding(nanovgo.Hole)
 			ctx.SetFillPaint(shadowPaint)
 			ctx.Fill()
 
@@ -673,8 +674,8 @@ func drawColorWheel(ctx *nanovgo.Context, x, y, w, h, t float32) {
 		a0 := float32(i)/6.0*nanovgo.PI*2.0 - aeps
 		a1 := float32(i+1.0)/6.0*nanovgo.PI*2.0 + aeps
 		ctx.BeginPath()
-		ctx.Arc(cx, cy, r0, a0, a1, nanovgo.CW)
-		ctx.Arc(cx, cy, r1, a1, a0, nanovgo.CCW)
+		ctx.Arc(cx, cy, r0, a0, a1, nanovgo.Clockwise)
+		ctx.Arc(cx, cy, r1, a1, a0, nanovgo.CounterClockwise)
 		ctx.ClosePath()
 		ax = cx + cosF(a0)*(r0+r1)*0.5
 		ay = cy + sinF(a0)*(r0+r1)*0.5
@@ -707,7 +708,7 @@ func drawColorWheel(ctx *nanovgo.Context, x, y, w, h, t float32) {
 	ctx.BeginPath()
 	ctx.Rect(r0-2-10, -4-10, r1-r0+4+20, 8+20)
 	ctx.Rect(r0-2, -4, r1-r0+4, 8)
-	ctx.PathWinding(nanovgo.HOLE)
+	ctx.PathWinding(nanovgo.Hole)
 	ctx.SetFillPaint(paint)
 	ctx.Fill()
 
@@ -744,7 +745,7 @@ func drawColorWheel(ctx *nanovgo.Context, x, y, w, h, t float32) {
 	ctx.BeginPath()
 	ctx.Rect(ax-20, ay-20, 40, 40)
 	ctx.Circle(ax, ay, 7)
-	ctx.PathWinding(nanovgo.HOLE)
+	ctx.PathWinding(nanovgo.Hole)
 	ctx.SetFillPaint(paint)
 	ctx.Fill()
 }
@@ -752,8 +753,8 @@ func drawColorWheel(ctx *nanovgo.Context, x, y, w, h, t float32) {
 func drawLines(ctx *nanovgo.Context, x, y, w, h, t float32) {
 	var pad float32 = 5.0
 	s := w/9.0 - pad*2
-	joins := []nanovgo.LineCap{nanovgo.MITER, nanovgo.ROUND, nanovgo.BEVEL}
-	caps := []nanovgo.LineCap{nanovgo.BUTT, nanovgo.ROUND, nanovgo.SQUARE}
+	joins := []nanovgo.LineCap{nanovgo.Miter, nanovgo.Round, nanovgo.Bevel}
+	caps := []nanovgo.LineCap{nanovgo.Butt, nanovgo.Round, nanovgo.Square}
 
 	ctx.Save()
 	defer ctx.Restore()
@@ -785,8 +786,8 @@ func drawLines(ctx *nanovgo.Context, x, y, w, h, t float32) {
 			ctx.LineTo(fx+pts[6], fy+pts[7])
 			ctx.Stroke()
 
-			ctx.SetLineCap(nanovgo.BUTT)
-			ctx.SetLineJoin(nanovgo.BEVEL)
+			ctx.SetLineCap(nanovgo.Butt)
+			ctx.SetLineJoin(nanovgo.Bevel)
 
 			ctx.SetStrokeWidth(1.0)
 			ctx.SetStrokeColor(nanovgo.RGBA(0, 192, 255, 255))
@@ -818,7 +819,7 @@ func drawWidths(ctx *nanovgo.Context, x, y, width float32) {
 }
 
 func drawCaps(ctx *nanovgo.Context, x, y, width float32) {
-	caps := []nanovgo.LineCap{nanovgo.BUTT, nanovgo.ROUND, nanovgo.SQUARE}
+	caps := []nanovgo.LineCap{nanovgo.Butt, nanovgo.Round, nanovgo.Square}
 	var lineWidth float32 = 8.0
 
 	ctx.Save()
@@ -854,7 +855,7 @@ func drawParagraph(ctx *nanovgo.Context, x, y, width, height, mx, my float32) {
 
 	ctx.SetFontSize(18.0)
 	ctx.SetFontFace("sans")
-	ctx.SetTextAlign(nanovgo.ALIGN_LEFT | nanovgo.ALIGN_TOP)
+	ctx.SetTextAlign(nanovgo.AlignLeft | nanovgo.AlignTop)
 	_, _, lineh := ctx.TextMetrics()
 	// The text break API can be used to fill a large buffer of rows,
 	// or to iterate over the text just few lines (or just one) at a time.
@@ -923,7 +924,7 @@ func drawParagraph(ctx *nanovgo.Context, x, y, width, height, mx, my float32) {
 		txt := strconv.Itoa(gutter)
 
 		ctx.SetFontSize(13.0)
-		ctx.SetTextAlign(nanovgo.ALIGN_RIGHT | nanovgo.ALIGN_MIDDLE)
+		ctx.SetTextAlign(nanovgo.AlignRight | nanovgo.AlignMiddle)
 
 		_, bounds := ctx.TextBounds(gx, gy, txt)
 
@@ -944,7 +945,7 @@ func drawParagraph(ctx *nanovgo.Context, x, y, width, height, mx, my float32) {
 	y += 20.0
 
 	ctx.SetFontSize(13.0)
-	ctx.SetTextAlign(nanovgo.ALIGN_LEFT | nanovgo.ALIGN_TOP)
+	ctx.SetTextAlign(nanovgo.AlignLeft | nanovgo.AlignTop)
 	ctx.SetTextLineHeight(1.2)
 
 	bounds := ctx.TextBoxBounds(x, y, 150, "Hover your mouse over the text to see calculated caret position.")

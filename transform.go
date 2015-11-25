@@ -5,26 +5,26 @@ import (
 )
 
 // The following functions can be used to make calculations on 2x3 transformation matrices.
-// A 2x3 matrix is represented as float[6].
 
+// TransformMatrix is a 2x3 matrix is represented as float[6].
 type TransformMatrix [6]float32
 
-// Makes the transform to identity matrix.
+// IdentityMatrix makes the transform to identity matrix.
 func IdentityMatrix() TransformMatrix {
 	return TransformMatrix{1.0, 0.0, 0.0, 1.0, 0.0, 0.0}
 }
 
-// Makes the transform to translation matrix matrix.
+// TranslateMatrix makes the transform to translation matrix matrix.
 func TranslateMatrix(tx, ty float32) TransformMatrix {
 	return TransformMatrix{1.0, 0.0, 0.0, 1.0, tx, ty}
 }
 
-// Makes the transform to scale matrix.
+// ScaleMatrix makes the transform to scale matrix.
 func ScaleMatrix(sx, sy float32) TransformMatrix {
 	return TransformMatrix{sx, 0.0, 0.0, sy, 0.0, 0.0}
 }
 
-// Makes the transform to rotate matrix. Angle is specified in radians.
+// RotateMatrix makes the transform to rotate matrix. Angle is specified in radians.
 func RotateMatrix(a float32) TransformMatrix {
 	sin, cos := math.Sincos(float64(a))
 	sinF := float32(sin)
@@ -32,17 +32,17 @@ func RotateMatrix(a float32) TransformMatrix {
 	return TransformMatrix{cosF, sinF, -sinF, cosF, 0.0, 0.0}
 }
 
-// Makes the transform to skew-x matrix. Angle is specified in radians.
+// SkewXMatrix makes the transform to skew-x matrix. Angle is specified in radians.
 func SkewXMatrix(a float32) TransformMatrix {
 	return TransformMatrix{1.0, 0.0, float32(math.Tan(float64(a))), 1.0, 0.0, 0.0}
 }
 
-// Makes the transform to skew-y matrix. Angle is specified in radians.
+// SkewYMatrix makes the transform to skew-y matrix. Angle is specified in radians.
 func SkewYMatrix(a float32) TransformMatrix {
 	return TransformMatrix{1.0, float32(math.Tan(float64(a))), 0.0, 1.0, 0.0, 0.0}
 }
 
-// Sets the transform to the result of multiplication of two transforms, of A = A*B.
+// Multiply makes the transform to the result of multiplication of two transforms, of A = A*B.
 func (t TransformMatrix) Multiply(s TransformMatrix) TransformMatrix {
 	t0 := t[0]*s[0] + t[1]*s[2]
 	t2 := t[2]*s[0] + t[3]*s[2]
@@ -56,12 +56,12 @@ func (t TransformMatrix) Multiply(s TransformMatrix) TransformMatrix {
 	return t
 }
 
-// Sets the transform to the result of multiplication of two transforms, of A = B*A.
+// PreMultiply makes the transform to the result of multiplication of two transforms, of A = B*A.
 func (t TransformMatrix) PreMultiply(s TransformMatrix) TransformMatrix {
 	return s.Multiply(t)
 }
 
-// Sets the destination to inverse of specified transform.
+// Inverse makes the destination to inverse of specified transform.
 // Returns 1 if the inverse could be calculated, else 0.
 func (t TransformMatrix) Inverse() TransformMatrix {
 	t0 := float64(t[0])
@@ -85,13 +85,14 @@ func (t TransformMatrix) Inverse() TransformMatrix {
 	}
 }
 
-// Transform a point by given transform.
+// TransformPoint transforms a point by given TransformMatrix.
 func (t TransformMatrix) TransformPoint(sx, sy float32) (dx, dy float32) {
 	dx = sx*t[0] + sy*t[2] + t[4]
 	dy = sx*t[1] + sy*t[3] + t[5]
 	return
 }
 
+// ToMat3x4 makes 3x4 matrix.
 func (t TransformMatrix) ToMat3x4() []float32 {
 	return []float32{
 		t[0], t[1], 0.0, 0.0,

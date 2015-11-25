@@ -10,12 +10,12 @@ import (
 )
 
 const (
-	ICON_SEARCH        = 0x1F50D
-	ICON_CIRCLED_CROSS = 0x2716
-	ICON_CHEVRON_RIGHT = 0xE75E
-	ICON_CHECK         = 0x2713
-	ICON_LOGIN         = 0xE740
-	ICON_TRASH         = 0xE729
+	iconSEARCH       = 0x1F50D
+	iconCIRCLEDCROSS = 0x2716
+	iconCHEVRONRIGHT = 0xE75E
+	iconCHECK        = 0x2713
+	iconLOGIN        = 0xE740
+	iconTRASH        = 0xE729
 )
 
 var blowup bool
@@ -77,7 +77,7 @@ func renderDemo(ctx *nanovgo.Context, mx, my, width, height, t float32, data *De
 	drawEditBox(ctx, "Password", x, y, 280, 28)
 	y += 38
 	drawCheckBox(ctx, "Remember me", x, y, 140, 28)
-	drawButton(ctx, ICON_LOGIN, "Sign in", x+138, y, 140, 28, nanovgo.RGBA(0, 96, 128, 255))
+	drawButton(ctx, iconLOGIN, "Sign in", x+138, y, 140, 28, nanovgo.RGBA(0, 96, 128, 255))
 	y += 45
 
 	// Slider
@@ -87,7 +87,7 @@ func renderDemo(ctx *nanovgo.Context, mx, my, width, height, t float32, data *De
 	drawSlider(ctx, 0.4, x, y, 170, 28)
 	y += 55
 
-	drawButton(ctx, ICON_TRASH, "Delete", x, y, 160, 28, nanovgo.RGBA(128, 16, 8, 255))
+	drawButton(ctx, iconTRASH, "Delete", x, y, 160, 28, nanovgo.RGBA(128, 16, 8, 255))
 	drawButton(ctx, 0, "Cancel", x+170, y, 110, 28, nanovgo.RGBA(0, 0, 0, 0))
 
 	// Thumbnails box
@@ -112,7 +112,7 @@ func main() {
 	window.MakeContextCurrent()
 
 	//ctx, err := nanovgo.NewContext( nanovgo.ANTIALIAS | nanovgo.STENCIL_STROKES | nanovgo.DEBUG)
-	ctx, err := nanovgo.NewContext(nanovgo.STENCIL_STROKES | nanovgo.DEBUG)
+	ctx, err := nanovgo.NewContext(nanovgo.StencilStrokes | nanovgo.Debug)
 	defer ctx.Delete()
 
 	if err != nil {
@@ -124,7 +124,7 @@ func main() {
 
 	glfw.SwapInterval(0)
 
-	fps := perfgraph.NewPerfGraph(perfgraph.RENDER_FPS, "Frame Time", "sans")
+	fps := perfgraph.NewPerfGraph("Frame Time", "sans")
 
 	for !window.ShouldClose() {
 		t, _ := fps.UpdateGraph()
