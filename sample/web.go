@@ -77,7 +77,7 @@ func main() {
 		gl.Enable(gl.CULL_FACE)
 		gl.Disable(gl.DEPTH_TEST)
 
-		ctx.BeginFrame(fbWidth, fbHeight, pixelRatio)
+		ctx.BeginFrame(winWidth, winHeight, pixelRatio)
 
 		demo.RenderDemo(ctx, float32(mx), float32(my), float32(winWidth), float32(winHeight), t, blowup, demoData)
 		fps.RenderGraph(ctx, 5, 5)

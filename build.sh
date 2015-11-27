@@ -15,6 +15,6 @@ cp ./Roboto-Bold.ttf assets
 cp ./Roboto-Regular.ttf assets
 cp ./entypo.ttf assets
 go-bindata -tags "js" -pkg "demo" -o demo/bindata.go assets
-gopherjs build -o ./gh-pages/sample.js
+gopherjs build -o ./gh-pages/demo/sample.js
 
 popd
