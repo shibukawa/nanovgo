@@ -22,7 +22,7 @@ import (
 //
 // Fill and stroke render style can be either a solid color or a paint which is a gradient or a pattern.
 // Solid color is simply defined as a color value, different kinds of paints can be created
-// using nanovgo.LinearGradient(), nanovgo.BoxGradient(), nanovgo.RadialGradient() and nanovgo.ImagePattern().
+// using LinearGradient(), BoxGradient(), RadialGradient() and ImagePattern().
 //
 // Current render style can be saved and restored using Save() and Restore().
 //
@@ -37,7 +37,7 @@ import (
 // Where: sx,sy define scaling, kx,ky skewing, and tx,ty translation.
 // The last row is assumed to be 0,0,1 and is not stored.
 //
-// Apart from nvgResetTransform(), each transformation function first creates
+// Apart from ResetTransform(), each transformation function first creates
 // specific transformation matrix and pre-multiplies the current transformation by it.
 //
 // Current coordinate system (transformation) can be saved and restored using Save() and Restore().
@@ -46,7 +46,7 @@ import (
 //
 // NanoVG allows you to load jpg, png, psd, tga, pic and gif files to be used for rendering.
 // In addition you can upload your own image. The image loading is provided by stb_image.
-// The parameter imageFlags is combination of flags defined in nanovgo.ImageFlags.
+// The parameter imageFlags is combination of flags defined in ImageFlags.
 //
 // Paints
 //
@@ -60,17 +60,17 @@ import (
 //
 // Paths
 //
-// Drawing a new shape starts with nvgBeginPath(), it clears all the currently defined paths.
+// Drawing a new shape starts with BeginPath(), it clears all the currently defined paths.
 // Then you define one or more paths and sub-paths which describe the shape. The are functions
 // to draw common shapes like rectangles and circles, and lower level step-by-step functions,
 // which allow to define a path curve by curve.
 //
 // NanoVG uses even-odd fill rule to draw the shapes. Solid shapes should have counter clockwise
 // winding and holes should have counter clockwise order. To specify winding of a path you can
-// call nvgPathWinding(). This is useful especially for the common shapes, which are drawn CCW.
+// call PathWinding(). This is useful especially for the common shapes, which are drawn CCW.
 //
-// Finally you can fill the path using current fill style by calling nvgFill(), and stroke it
-// with current stroke style by calling nvgStroke().
+// Finally you can fill the path using current fill style by calling Fill(), and stroke it
+// with current stroke style by calling Stroke().
 //
 // The curve segments and sub-paths are transformed by the current transform.
 //
@@ -145,7 +145,7 @@ func (c *Context) Delete() {
 // frame buffer size. In that case you would set windowWidth/Height to the window size
 // devicePixelRatio to: frameBufferWidth / windowWidth.
 func (c *Context) BeginFrame(windowWidth, windowHeight int, devicePixelRatio float32) {
-	/*log.Printf("Tris: draws:%d  fill:%d  stroke:%d  text:%d  TOT:%d\n",
+	/*dumpLog("Tris: draws:%d  fill:%d  stroke:%d  text:%d  TOT:%d\n",
 	c.drawCallCount, c.fillTriCount, c.strokeTriCount, c.textTriCount,
 	c.drawCallCount+c.fillTriCount+c.strokeTriCount+c.textTriCount)*/
 	c.states = c.states[:0]
@@ -516,7 +516,7 @@ func (c *Context) QuadTo(cx, cy, x, y float32) {
 }
 
 // Arc creates new circle arc shaped sub-path. The arc center is at cx,cy, the arc radius is r,
-// and the arc is drawn from angle a0 to a1, and swept in direction dir (nanovgo.CCW, or nanovgo.CW).
+// and the arc is drawn from angle a0 to a1, and swept in direction dir (CounterClockwise, or Clockwise).
 // Angles are specified in radians.
 func (c *Context) Arc(cx, cy, r, a0, a1 float32, dir Direction) {
 	var move nvgCommands
@@ -712,6 +712,7 @@ func (c *Context) Fill() {
 	state := c.getState()
 	fillPaint := state.fill
 	c.flattenPaths()
+
 	if c.params.edgeAntiAlias() {
 		c.cache.expandFill(c.fringeWidth, Miter, 2.4, c.fringeWidth)
 	} else {
@@ -788,6 +789,9 @@ func (c *Context) FindFont(name string) int {
 
 // SetFontSize sets the font size of current text style.
 func (c *Context) SetFontSize(size float32) {
+	if size < 0 {
+		panic("Context.SetFontSize: negative font size is invalid")
+	}
 	c.getState().fontSize = size
 }
 

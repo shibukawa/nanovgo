@@ -8,6 +8,21 @@ API Reference
 
 See `GoDoc <https://godoc.org/github.com/shibukawa/nanovgo>`_
 
+Porting Memo
+--------------
+
+* Root folder ``.go`` files
+
+  Ported from NanoVG.
+
+* ``fontstashmini/fontstash_mini.go``
+
+  Ported from `fontstash <https://github.com/memononen/fontstash>`_. It includes only needed functions.
+
+* ``fontstashmini/truetype``
+
+  Copy from ``https://github.com/TheOnly92/fontstash.go`` (Public Domain)
+
 License
 ----------
 

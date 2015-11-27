@@ -9,9 +9,9 @@ import (
 	"github.com/shibukawa/nanovgo"
 	"github.com/shibukawa/nanovgo/perfgraph"
 	"github.com/shibukawa/nanovgo/sample/demo"
+	"io/ioutil"
 	"log"
 	"net/http"
-	"io/ioutil"
 )
 
 var blowup bool
@@ -34,17 +34,17 @@ func main() {
 	}
 	defer glfw.Terminate()
 
-	// demo MSAA
+	glfw.WindowHint(glfw.Stencil, 1)
 	glfw.WindowHint(glfw.Samples, 4)
 
-	window, err := glfw.CreateWindow(1000*0.9, 600*0.9, "NanoVGo", nil, nil)
+	window, err := glfw.CreateWindow(1000*0.6, 600*0.6, "NanoVGo", nil, nil)
 	if err != nil {
 		panic(err)
 	}
 	window.SetKeyCallback(key)
 	window.MakeContextCurrent()
 
-	ctx, err := nanovgo.NewContext(nanovgo.AntiAlias | nanovgo.StencilStrokes /* | nanovgo.Debug*/)
+	ctx, err := nanovgo.NewContext(0)
 	defer ctx.Delete()
 
 	if err != nil {
@@ -59,8 +59,6 @@ func main() {
 
 	for !window.ShouldClose() {
 		t, _ := fps.UpdateGraph()
-
-		//time.Sleep(time.Second*time.Duration(0.016666 - dt))
 
 		fbWidth, fbHeight := window.GetFramebufferSize()
 		winWidth, winHeight := window.GetSize()
@@ -79,8 +77,7 @@ func main() {
 		gl.Enable(gl.CULL_FACE)
 		gl.Disable(gl.DEPTH_TEST)
 
-		ctx.BeginFrame(winWidth, winHeight, pixelRatio)
-		ctx.Scale(0.9, 0.9) // github.com's README area has small width
+		ctx.BeginFrame(fbWidth, fbHeight, pixelRatio)
 
 		demo.RenderDemo(ctx, float32(mx), float32(my), float32(winWidth), float32(winHeight), t, blowup, demoData)
 		fps.RenderGraph(ctx, 5, 5)

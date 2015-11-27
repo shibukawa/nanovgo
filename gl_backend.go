@@ -4,9 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/goxjs/gl"
-	"log"
 	"strings"
-	"unsafe"
 )
 
 const (
@@ -28,10 +26,12 @@ func NewContext(flags CreateFlags) (*Context, error) {
 }
 
 type glShader struct {
-	program   gl.Program
-	fragment  gl.Shader
-	vertex    gl.Shader
-	locations [glnvgMaxLOCS]gl.Uniform
+	program      gl.Program
+	fragment     gl.Shader
+	vertex       gl.Shader
+	locations    [glnvgMaxLOCS]gl.Uniform
+	vertexAttrib gl.Attrib
+	tcoordAttrib gl.Attrib
 }
 
 func (s *glShader) createShader(name, header, opts, vShader, fShader string) error {
@@ -56,14 +56,14 @@ func (s *glShader) createShader(name, header, opts, vShader, fShader string) err
 	gl.AttachShader(program, vertexShader)
 	gl.AttachShader(program, fragmentShader)
 
-	gl.BindAttribLocation(program, gl.Attrib{0}, "vertex")
-	gl.BindAttribLocation(program, gl.Attrib{1}, "tcoord")
-
 	gl.LinkProgram(program)
 	status = gl.Enum(gl.GetProgrami(program, gl.LINK_STATUS))
 	if status != gl.TRUE {
 		return dumpProgramError(program, name)
 	}
+
+	s.vertexAttrib = gl.GetAttribLocation(program, "vertex")
+	s.tcoordAttrib = gl.GetAttribLocation(program, "tcoord")
 
 	s.program = program
 	s.vertex = vertexShader
@@ -166,7 +166,7 @@ func (c *glContext) checkError(str string) {
 	}
 	err := gl.GetError()
 	if err != gl.NO_ERROR {
-		log.Printf("Error %08x after %s\n", err, str)
+		dumpLog("Error %08x after %s\n", err, str)
 	}
 }
 
@@ -294,7 +294,6 @@ func (c *glContext) fill(call *glCall) {
 	// Draw anti-aliased pixels
 	gl.ColorMask(true, true, true, true)
 	c.setUniforms(call.uniformOffset+1, call.image)
-	checkError(c, "fill fill")
 
 	if c.flags&AntiAlias != 0 {
 		c.setStencilFunc(gl.EQUAL, 0x00, 0xff)
@@ -302,7 +301,7 @@ func (c *glContext) fill(call *glCall) {
 		// Draw fringes
 		for i := call.pathOffset; i < pathSentinel; i++ {
 			path := &c.paths[i]
-			gl.DrawArrays(gl.TRIANGLE_FAN, path.strokeOffset, path.strokeCount)
+			gl.DrawArrays(gl.TRIANGLE_STRIP, path.strokeOffset, path.strokeCount)
 		}
 	}
 
@@ -320,12 +319,14 @@ func (c *glContext) convexFill(call *glCall) {
 	c.setUniforms(call.uniformOffset, call.image)
 	checkError(c, "convex fill")
 
-	for _, path := range paths {
+	for i := range paths {
+		path := &paths[i]
 		gl.DrawArrays(gl.TRIANGLE_FAN, path.fillOffset, path.fillCount)
 	}
 
 	if c.flags&AntiAlias != 0 {
-		for _, path := range paths {
+		for i := range paths {
+			path := &paths[i]
 			gl.DrawArrays(gl.TRIANGLE_STRIP, path.strokeOffset, path.strokeCount)
 		}
 	}
@@ -343,7 +344,8 @@ func (c *glContext) stroke(call *glCall) {
 		gl.StencilOp(gl.KEEP, gl.KEEP, gl.INCR)
 		c.setUniforms(call.uniformOffset+1, call.image)
 		checkError(c, "stroke fill 0")
-		for _, path := range paths {
+		for i := range paths {
+			path := &paths[i]
 			gl.DrawArrays(gl.TRIANGLE_STRIP, path.strokeOffset, path.strokeCount)
 		}
 
@@ -351,7 +353,8 @@ func (c *glContext) stroke(call *glCall) {
 		c.setUniforms(call.uniformOffset, call.image)
 		c.setStencilFunc(gl.EQUAL, 0x00, 0xff)
 		gl.StencilOp(gl.KEEP, gl.KEEP, gl.KEEP)
-		for _, path := range paths {
+		for i := range paths {
+			path := &paths[i]
 			gl.DrawArrays(gl.TRIANGLE_STRIP, path.strokeOffset, path.strokeCount)
 		}
 
@@ -360,7 +363,8 @@ func (c *glContext) stroke(call *glCall) {
 		c.setStencilFunc(gl.ALWAYS, 0x00, 0xff)
 		gl.StencilOp(gl.ZERO, gl.ZERO, gl.ZERO)
 		checkError(c, "stroke fill 1")
-		for _, path := range paths {
+		for i := range paths {
+			path := &paths[i]
 			gl.DrawArrays(gl.TRIANGLE_STRIP, path.strokeOffset, path.strokeCount)
 		}
 		gl.ColorMask(true, true, true, true)
@@ -368,7 +372,8 @@ func (c *glContext) stroke(call *glCall) {
 	} else {
 		c.setUniforms(call.uniformOffset, call.image)
 		checkError(c, "stroke fill")
-		for _, path := range paths {
+		for i := range paths {
+			path := &paths[i]
 			gl.DrawArrays(gl.TRIANGLE_STRIP, path.strokeOffset, path.strokeCount)
 		}
 	}
@@ -410,6 +415,7 @@ func (p *glParams) renderCreate() error {
 	context.shader.getUniforms()
 
 	context.vertexBuffer = gl.CreateBuffer()
+	context.vertexBuffer = gl.CreateBuffer()
 
 	checkError(context, "create done")
 	gl.Finish()
@@ -419,11 +425,11 @@ func (p *glParams) renderCreate() error {
 func (p *glParams) renderCreateTexture(texType nvgTextureType, w, h int, flags ImageFlags, data []byte) int {
 	if nearestPow2(w) != w || nearestPow2(h) != h {
 		if (flags&ImageRepeatX) != 0 || (flags&ImageRepeatY) != 0 {
-			log.Printf("Repeat X/Y is not supported for non power-of-two textures (%d x %d)\n", w, h)
+			dumpLog("Repeat X/Y is not supported for non power-of-two textures (%d x %d)\n", w, h)
 			flags &= ^(ImageRepeatY | ImageRepeatX)
 		}
 		if (flags & ImageGenerateMipmaps) != 0 {
-			log.Printf("Mip-maps is not support for non power-of-two textures (%d x %d)\n", w, h)
+			dumpLog("Mip-maps is not support for non power-of-two textures (%d x %d)\n", w, h)
 			flags &= ^ImageGenerateMipmaps
 		}
 	}
@@ -438,8 +444,10 @@ func (p *glParams) renderCreateTexture(texType nvgTextureType, w, h int, flags I
 	gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
 
 	if texType == nvgTextureRGBA {
+		data = prepareTextureBuffer(data, w, h, 4)
 		gl.TexImage2D(gl.TEXTURE_2D, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, data)
 	} else {
+		data = prepareTextureBuffer(data, w, h, 1)
 		gl.TexImage2D(gl.TEXTURE_2D, 0, w, h, gl.LUMINANCE, gl.UNSIGNED_BYTE, data)
 	}
 
@@ -553,23 +561,21 @@ func (p *glParams) renderFlush() {
 		gl.StencilOp(gl.KEEP, gl.KEEP, gl.KEEP)
 		gl.StencilFunc(gl.ALWAYS, 0, 0xffffffff)
 		gl.ActiveTexture(gl.TEXTURE0)
-
+		gl.BindTexture(gl.TEXTURE_2D, gl.Texture{})
 		c.stencilMask = 0xffffffff
 		c.stencilFunc = gl.ALWAYS
 		c.stencilFuncRef = 0
 		c.stencilFuncMask = 0xffffffff
 
-		// Convert []float32 list to []byte without copy
-		var b []byte
-		b = (*(*[1 << 31]byte)(unsafe.Pointer(&c.vertexes[0])))[:len(c.vertexes)*4]
-
+		b := castFloat32ToByte(c.vertexes)
+		//dumpLog("vertex:", c.vertexes)
 		// Upload vertex data
 		gl.BindBuffer(gl.ARRAY_BUFFER, c.vertexBuffer)
 		gl.BufferData(gl.ARRAY_BUFFER, b, gl.STREAM_DRAW)
-		gl.EnableVertexAttribArray(gl.Attrib{0})
-		gl.EnableVertexAttribArray(gl.Attrib{1})
-		gl.VertexAttribPointer(gl.Attrib{0}, 2, gl.FLOAT, false, 4*4, 0)
-		gl.VertexAttribPointer(gl.Attrib{1}, 2, gl.FLOAT, false, 4*4, 8)
+		gl.EnableVertexAttribArray(c.shader.vertexAttrib)
+		gl.EnableVertexAttribArray(c.shader.tcoordAttrib)
+		gl.VertexAttribPointer(c.shader.vertexAttrib, 2, gl.FLOAT, false, 4*4, 0)
+		gl.VertexAttribPointer(c.shader.tcoordAttrib, 2, gl.FLOAT, false, 4*4, 8)
 
 		// Set view and texture just once per frame.
 		gl.Uniform1i(c.shader.locations[glnvgLocTEX], 0)
@@ -588,8 +594,8 @@ func (p *glParams) renderFlush() {
 				c.triangles(call)
 			}
 		}
-		gl.DisableVertexAttribArray(gl.Attrib{0})
-		gl.DisableVertexAttribArray(gl.Attrib{1})
+		gl.DisableVertexAttribArray(c.shader.vertexAttrib)
+		gl.DisableVertexAttribArray(c.shader.tcoordAttrib)
 		gl.Disable(gl.CULL_FACE)
 		gl.BindBuffer(gl.ARRAY_BUFFER, gl.Buffer{})
 		gl.UseProgram(gl.Program{})
@@ -619,7 +625,6 @@ func (p *glParams) renderFill(paint *Paint, scissor *nvgScissor, fringe float32,
 
 	// Allocate vertices for all the paths
 	vertexOffset := c.allocVertexMemory(maxVertexCount(paths) + 6)
-
 	for i := range paths {
 		glPath := &glPaths[i]
 		path := &paths[i]
@@ -823,14 +828,14 @@ func (p *glParams) renderDelete() {
 func dumpShaderError(shader gl.Shader, name, typeName string) error {
 	str := gl.GetShaderInfoLog(shader)
 	msg := fmt.Sprintf("Shader %s/%s error:\n%s\n", name, typeName, str)
-	log.Println(msg)
+	dumpLog(msg)
 	return errors.New(msg)
 }
 
 func dumpProgramError(program gl.Program, name string) error {
 	str := gl.GetProgramInfoLog(program)
 	msg := fmt.Sprintf("Program %s error:\n%s\n", name, str)
-	log.Println(msg)
+	dumpLog(msg)
 	return errors.New(msg)
 }
 
@@ -840,7 +845,7 @@ func checkError(p *glContext, str string) {
 	}
 	err := gl.GetError()
 	if err != gl.NO_ERROR {
-		log.Printf("Error %08x after %s\n", int(err), str)
+		dumpLog("Error %08x after %s\n", int(err), str)
 	}
 }
 
@@ -908,7 +913,7 @@ var fillFragmentShader = `
        in vec2 fpos;
        out vec4 outColor;
 #else
-       // !NANOVG_
+       // !NANOVG_GL3
        uniform vec4 frag[UNIFORMARRAY_SIZE];
        uniform sampler2D tex;
        varying vec2 ftcoord;

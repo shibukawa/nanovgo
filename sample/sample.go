@@ -42,7 +42,7 @@ func main() {
 	window.SetKeyCallback(key)
 	window.MakeContextCurrent()
 
-	ctx, err := nanovgo.NewContext(nanovgo.AntiAlias | nanovgo.StencilStrokes /* | nanovgo.Debug*/)
+	ctx, err := nanovgo.NewContext(0 /*nanovgo.AntiAlias | nanovgo.StencilStrokes | nanovgo.Debug*/)
 	defer ctx.Delete()
 
 	if err != nil {
@@ -57,8 +57,6 @@ func main() {
 
 	for !window.ShouldClose() {
 		t, _ := fps.UpdateGraph()
-
-		//time.Sleep(time.Second*time.Duration(0.016666 - dt))
 
 		fbWidth, fbHeight := window.GetFramebufferSize()
 		winWidth, winHeight := window.GetSize()
