@@ -11,9 +11,9 @@ NanoVGo
 
 .. raw:: html
 
-   <iframe src="/demo/" width="900" height="540"></iframe>
+   <iframe src="/nanovgo/demo/" width="900" height="540"></iframe>
 
-`Full Screen </demo/>`_
+`Full Screen </nanovgo/demo/>`_
 
 NanoVGo is a pure golang implementation of `NanoVG <https://github.com/memononen/nanovg>`_. NanoVG is a vector graphics engine inspired by HTML5 Canvas API.
 
