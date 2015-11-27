@@ -3,6 +3,8 @@ NanoVGo
 
 Pure golang implementation of `NanoVG <https://github.com/memononen/nanovg>`_. NanoVG is a vector graphics engine inspired by HTML5 Canvas API.
 
+`DEMO <https://shibukawa.github.io/nanovgo/>`_
+
 API Reference
 ---------------
 
