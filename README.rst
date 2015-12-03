@@ -44,6 +44,8 @@ Contribution
 ----------------
 
 * Moriyoshi Koizumi
+* @hnakamur2
+* @mattn_jp
 * @hagat
 * @h_doxas
 * FSX
