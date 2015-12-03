@@ -36,6 +36,48 @@ func (c Color) List() []float32 {
 	return []float32{c.R, c.G, c.B, c.A}
 }
 
+// Convert To HSLA
+func (c Color) HSLA() (h, s, l, a float32) {
+	max := maxFs(c.R, c.G, c.B)
+	min := minFs(c.R, c.G, c.B)
+
+	l = (max + min) * 0.5
+
+	if max == min {
+		h = 0
+		s = 0
+	} else {
+		if max == c.R {
+			h = ((c.G - c.B) / (max - min)) * 1.0 / 6.0
+		} else if max == c.G {
+			h = ((c.B-c.R)/(max-min))*1.0/6.0 + 1.0/3.0
+		} else {
+			h = ((c.R-c.G)/(max-min))*1.0/6.0 + 2.0/3.0
+		}
+		h = float32(math.Mod(float64(h), 1.0))
+		if l <= 0.5 {
+			s = (max - min) / (max + min)
+		} else {
+			s = (max - min) / (2.0 - max - min)
+		}
+	}
+	a = c.A
+	return
+}
+
+// Calc luminance value
+func (c Color) Luminance() float32 {
+	return c.R*0.299 + c.G*0.587 + c.B*0.144
+}
+
+// Calc constraint color
+func (c Color) ContrastingColor() Color {
+	if c.Luminance() < 0.5 {
+		return MONO(255, 255)
+	}
+	return MONO(0, 255)
+}
+
 // RGB returns a color value from red, green, blue values. Alpha will be set to 255 (1.0f).
 func RGB(r, g, b uint8) Color {
 	return RGBA(r, g, b, 255)

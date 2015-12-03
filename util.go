@@ -78,6 +78,26 @@ func maxI(a, b int) int {
 	return b
 }
 
+func maxFs(v float32, values ...float32) float32 {
+	max := v
+	for _, value := range values {
+		if max < value {
+			max = value
+		}
+	}
+	return max
+}
+
+func minFs(v float32, values ...float32) float32 {
+	min := v
+	for _, value := range values {
+		if min > value {
+			min = value
+		}
+	}
+	return min
+}
+
 func cross(dx0, dy0, dx1, dy1 float32) float32 {
 	return dx1*dy0 - dx0*dy1
 }

@@ -145,9 +145,6 @@ func (c *Context) Delete() {
 // frame buffer size. In that case you would set windowWidth/Height to the window size
 // devicePixelRatio to: frameBufferWidth / windowWidth.
 func (c *Context) BeginFrame(windowWidth, windowHeight int, devicePixelRatio float32) {
-	/*dumpLog("Tris: draws:%d  fill:%d  stroke:%d  text:%d  TOT:%d\n",
-	c.drawCallCount, c.fillTriCount, c.strokeTriCount, c.textTriCount,
-	c.drawCallCount+c.fillTriCount+c.strokeTriCount+c.textTriCount)*/
 	c.states = c.states[:0]
 	c.Save()
 	c.Reset()
