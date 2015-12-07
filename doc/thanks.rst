@@ -7,7 +7,7 @@ Original author of nanovg.
 
 My code is heavly depending on `goxjs <https://github.com/goxjs/>`_ packages.
 
-The fllowing guys sent me PR:
+The following guys sent me PR:
 
 * `FSX <https://github.com/FSX>`_
 * `Moriyoshi Koizumi <https://github.com/moriyoshi>`_
