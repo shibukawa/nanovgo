@@ -752,6 +752,11 @@ func (c *Context) Stroke() {
 	strokePaint.outerColor.A *= state.alpha
 
 	c.flattenPaths()
+	for _, path := range c.cache.paths {
+		if path.count == 1 {
+			panic("")
+		}
+	}
 	if c.params.edgeAntiAlias() {
 		c.cache.expandStroke(strokeWidth*0.5+c.fringeWidth*0.5, state.lineCap, state.lineJoin, state.miterLimit, c.fringeWidth, c.tessTol)
 	} else {
@@ -889,7 +894,7 @@ func (c *Context) TextRune(x, y float32, runes []rune) float32 {
 		if !ok {
 			break
 		}
-		if iter.PrevGlyph.Index == -1 {
+		if iter.PrevGlyph == nil || iter.PrevGlyph.Index == -1 {
 			if !c.allocTextAtlas() {
 				break // no memory :(
 			}
@@ -899,7 +904,7 @@ func (c *Context) TextRune(x, y float32, runes []rune) float32 {
 			}
 			iter = prevIter
 			quad, _ = iter.Next() // try again
-			if iter.PrevGlyph.Index == -1 {
+			if iter.PrevGlyph == nil || iter.PrevGlyph.Index == -1 {
 				// still can not find glyph?
 				break
 			}
@@ -1513,9 +1518,9 @@ func (c *Context) allocTextAtlas() bool {
 	var iw, ih int
 	// if next fontImage already have a texture
 	if c.fontImages[c.fontImageIdx+1] != 0 {
-		iw, ih, _ = c.ImageSize(c.fontImageIdx + 1)
+		iw, ih, _ = c.ImageSize(c.fontImages[c.fontImageIdx+1])
 	} else { // calculate the new font image size and create it.
-		iw, ih, _ = c.ImageSize(c.fontImageIdx)
+		iw, ih, _ = c.ImageSize(c.fontImages[c.fontImageIdx])
 		if iw > ih {
 			ih *= 2
 		} else {
