@@ -17,6 +17,7 @@ type nvgParams interface {
 	renderFill(paint *Paint, scissor *nvgScissor, fringe float32, bounds [4]float32, paths []nvgPath)
 	renderStroke(paint *Paint, scissor *nvgScissor, fringe float32, strokeWidth float32, paths []nvgPath)
 	renderTriangles(paint *Paint, scissor *nvgScissor, vertexes []nvgVertex)
+	renderTriangleStrip(paint *Paint, scissor *nvgScissor, vertexes []nvgVertex)
 	renderDelete()
 }
 

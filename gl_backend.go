@@ -385,6 +385,12 @@ func (c *glContext) triangles(call *glCall) {
 	gl.DrawArrays(gl.TRIANGLES, call.triangleOffset, call.triangleCount)
 }
 
+func (c *glContext) triangleStrip(call *glCall) {
+	c.setUniforms(call.uniformOffset, call.image)
+	checkError(c, "triangle strip fill")
+	gl.DrawArrays(gl.TRIANGLE_STRIP, call.triangleOffset, call.triangleCount)
+}
+
 type glParams struct {
 	isEdgeAntiAlias bool
 	context         *glContext
@@ -566,7 +572,6 @@ func (p *glParams) renderFlush() {
 		c.stencilFunc = gl.ALWAYS
 		c.stencilFuncRef = 0
 		c.stencilFuncMask = 0xffffffff
-
 		b := castFloat32ToByte(c.vertexes)
 		//dumpLog("vertex:", c.vertexes)
 		// Upload vertex data
@@ -592,6 +597,8 @@ func (p *glParams) renderFlush() {
 				c.stroke(call)
 			case glnvgTRIANGLES:
 				c.triangles(call)
+			case glnvgTRIANGLESTRIP:
+				c.triangleStrip(call)
 			}
 		}
 		gl.DisableVertexAttribArray(c.shader.vertexAttrib)
@@ -787,6 +794,39 @@ func (p *glParams) renderTriangles(paint *Paint, scissor *nvgScissor, vertexes [
 
 	c.calls = append(c.calls, glCall{
 		callType:       glnvgTRIANGLES,
+		image:          paint.image,
+		triangleOffset: vertexOffset / 4,
+		triangleCount:  vertexCount,
+	})
+	call := &c.calls[callIndex]
+
+	for i := 0; i < vertexCount; i++ {
+		vertex := &vertexes[i]
+		c.vertexes[vertexOffset] = vertex.x
+		c.vertexes[vertexOffset+1] = vertex.y
+		c.vertexes[vertexOffset+2] = vertex.u
+		c.vertexes[vertexOffset+3] = vertex.v
+		vertexOffset += 4
+	}
+
+	// Fill shader
+	var frags []glFragUniforms
+	frags, call.uniformOffset = c.allocFragUniforms(1)
+	f0 := &frags[0]
+	f0.reset()
+	c.convertPaint(f0, paint, scissor, 1.0, 1.0, -1.0)
+	f0.setType(nsvgShaderIMG)
+}
+
+func (p *glParams) renderTriangleStrip(paint *Paint, scissor *nvgScissor, vertexes []nvgVertex) {
+	c := p.context
+
+	vertexCount := len(vertexes)
+	vertexOffset := c.allocVertexMemory(vertexCount)
+	callIndex := len(c.calls)
+
+	c.calls = append(c.calls, glCall{
+		callType:       glnvgTRIANGLESTRIP,
 		image:          paint.image,
 		triangleOffset: vertexOffset / 4,
 		triangleCount:  vertexCount,

@@ -882,7 +882,7 @@ func (c *Context) TextRune(x, y float32, runes []rune) float32 {
 	c.fs.SetAlign(fontstashmini.FONSAlign(state.textAlign))
 	c.fs.SetFont(state.fontID)
 
-	vertexCount := maxI(2, len(runes)) * 6 // conservative estimate.
+	vertexCount := maxI(2, len(runes)) * 4 // conservative estimate.
 	vertexes := c.cache.allocVertexes(vertexCount)
 
 	iter := c.fs.TextIterForRunes(x*scale, y*scale, runes)
@@ -917,14 +917,12 @@ func (c *Context) TextRune(x, y float32, runes []rune) float32 {
 		c6, c7 := state.xform.TransformPoint(quad.X0*invScale, quad.Y1*invScale)
 		//log.Printf("quad(%c) x0=%d, x1=%d, y0=%d, y1=%d, s0=%d, s1=%d, t0=%d, t1=%d\n", iter.CodePoint, int(quad.X0), int(quad.X1), int(quad.Y0), int(quad.Y1), int(1024*quad.S0), int(quad.S1*1024), int(quad.T0*1024), int(quad.T1*1024))
 		// Create triangles
-		if index+6 <= vertexCount {
-			(&vertexes[index]).set(c0, c1, quad.S0, quad.T0)
-			(&vertexes[index+1]).set(c4, c5, quad.S1, quad.T1)
-			(&vertexes[index+2]).set(c2, c3, quad.S1, quad.T0)
-			(&vertexes[index+3]).set(c0, c1, quad.S0, quad.T0)
-			(&vertexes[index+4]).set(c6, c7, quad.S0, quad.T1)
-			(&vertexes[index+5]).set(c4, c5, quad.S1, quad.T1)
-			index += 6
+		if index+4 <= vertexCount {
+			(&vertexes[index]).set(c2, c3, quad.S1, quad.T0)
+			(&vertexes[index+1]).set(c0, c1, quad.S0, quad.T0)
+			(&vertexes[index+2]).set(c4, c5, quad.S1, quad.T1)
+			(&vertexes[index+3]).set(c6, c7, quad.S0, quad.T1)
+			index += 4
 		}
 	}
 	c.flushTextTexture()
@@ -1180,7 +1178,7 @@ func (c *Context) TextBreakLinesRune(runes []rune, breakRowWidth float32) []Text
 		if !ok {
 			break
 		}
-		if iter.PrevGlyph.Index == -1 && !c.allocTextAtlas() {
+		if iter.PrevGlyph == nil || iter.PrevGlyph.Index == -1 && !c.allocTextAtlas() {
 			iter = prevIter
 			quad, _ = iter.Next() // try again
 		}
@@ -1548,7 +1546,7 @@ func (c *Context) renderText(vertexes []nvgVertex) {
 	paint.innerColor.A *= state.alpha
 	paint.outerColor.A *= state.alpha
 
-	c.params.renderTriangles(&paint, &state.scissor, vertexes)
+	c.params.renderTriangleStrip(&paint, &state.scissor, vertexes)
 
 	c.drawCallCount++
 	c.textTriCount += len(vertexes) / 3
