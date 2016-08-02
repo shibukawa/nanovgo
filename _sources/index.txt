@@ -19,10 +19,6 @@ NanoVGo is a pure golang implementation of `NanoVG <https://github.com/memononen
 
 It is depend on cross platform `OpenGL/WebGL library <https://github.com/goxjs/gl>`_. Sample code uses cross platform `glfw wrapper <https://github.com/goxjs/glfw>`_.  I tested on Mac, Windows, and browsers.
 
-.. note::
-
-   To build on gopher.js, it needs `this fix <https://github.com/goxjs/glfw/pull/7>`_ to enable stencil buffer feature now.
-
 .. toctree::
    :maxdepth: 2
 
