@@ -34,7 +34,7 @@ func main() {
 	}
 	defer glfw.Terminate()
 
-	glfw.WindowHint(glfw.Stencil, 1)
+	glfw.WindowHint(glfw.StencilBits, 1)
 	glfw.WindowHint(glfw.Samples, 4)
 
 	window, err := glfw.CreateWindow(1000*0.6, 600*0.6, "NanoVGo", nil, nil)
