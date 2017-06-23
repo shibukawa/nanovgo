@@ -963,6 +963,9 @@ func u32(b []byte, i int) uint32 {
 
 // u16 returns the big-endian uint16 at b[i:].
 func u16(b []byte, i int) uint16 {
+	if i >= len(b)-2 {
+		return uint16(0)
+	}
 	return uint16(b[i])<<8 | uint16(b[i+1])
 }
 
