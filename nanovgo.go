@@ -754,7 +754,7 @@ func (c *Context) Stroke() {
 	c.flattenPaths()
 	for _, path := range c.cache.paths {
 		if path.count == 1 {
-			panic("")
+			panic("Too few paths to draw a Stroke, ensure your path size is greater than zero.")
 		}
 	}
 	if c.params.edgeAntiAlias() {
